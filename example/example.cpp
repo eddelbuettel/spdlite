@@ -1,20 +1,28 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026, Gabi Melman
 
-#include "spdlite/sinks/basic_file_sink.h"
 #include "spdlite/sinks/color_sink.h"
+#include "spdlite/sinks/simple_file_sink.h"
 #include "spdlite/sinks/stdout_sink.h"
 #include "spdlite/spdlite.h"
 
+void banner();
 void log_levels();
+void file_sink_example();
+void multi_sink_example();
 
 int main() {
-    using namespace spdlite;
-    using sinks::color_stdout;
-    using sinks::basic_file_sink;   
+    banner();
+    log_levels();
+    file_sink_example();
+    multi_sink_example();
+    return 0;
+}
 
-    // Color console logger (single-threaded)
-    logger_st<color_stdout> console;
+// Print an ASCII banner with the spdlite version through a colored console logger.
+void banner() {
+    using namespace spdlite;
+    logger_st<sinks::color_stdout> console;
     console.info(R"(
                 ____ ___ __
    _________  ____/ / (.) /____
@@ -24,30 +32,37 @@ int main() {
     /_/
 )",
                  SPDLITE_VER_MAJOR, SPDLITE_VER_MINOR, SPDLITE_VER_PATCH);
-
-    // File logger
-    logger_st<basic_file_sink> file_logger("my_logger", basic_file_sink{"logs/example.txt", true});
-    file_logger.info("This is a log message in the file");
-
-    // Multiple sinks — color console + file
-    logger_st<color_stdout, basic_file_sink> multi("my_logger", color_stdout{},
-                                                   basic_file_sink{"logs/multi.txt", true});
-    multi.info("This goes to both console and file");
-
-    log_levels();
-    return 0;
 }
 
-// Log messages at different levels.
-// By default, levels>=info are enabled, but this can be configured at compile-time or runtime.
-void log_levels() {    
-    using spdlite::sinks::color_stdout;
-    using spdlite::logger_st<color_stdout> console;
-    console.log_level(level::trace);  // enable trace and above
+// Walk all log levels through a colored console logger.
+// By default the threshold is info; enable trace explicitly to see everything.
+void log_levels() {
+    using namespace spdlite;
+    logger_st<sinks::color_stdout> console;
+    console.log_level(level::trace);
     console.trace("This is a {} message", "trace");
     console.debug("This is a {} message", "debug");
     console.info("This is a {} message", "info");
     console.warn("This is a {} message", "warning");
     console.error("This is a {} message", "error");
     console.critical("This is a {} message", "critical");
+}
+
+// Log to a file via simple_file_sink. The sink creates parent directories
+// automatically and uses _wfopen on Windows for Unicode paths.
+void file_sink_example() {
+    using namespace spdlite;
+    logger_st<sinks::simple_file_sink> file_logger("my_logger",
+                                                   sinks::simple_file_sink{"logs/example.txt", true});
+    file_logger.info("This message is written to logs/example.txt");
+}
+
+// Compose multiple sinks into one logger — a single log call writes to all of them.
+void multi_sink_example() {
+    using namespace spdlite;
+    logger_st<sinks::color_stdout, sinks::simple_file_sink> multi(
+        "my_logger",
+        sinks::color_stdout{},
+        sinks::simple_file_sink{"logs/multi.txt", true});
+    multi.info("This goes to both console and file");
 }

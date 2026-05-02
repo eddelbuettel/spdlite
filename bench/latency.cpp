@@ -12,7 +12,7 @@
 
 #include "benchmark/benchmark.h"
 #include "spdlite/spdlite.h"
-#include "spdlite/sinks/basic_file_sink.h"
+#include "spdlite/sinks/simple_file_sink.h"
 #include "spdlite/sinks/null_sink.h"
 #include "spdlite/sinks/color_sink.h"
 
@@ -85,7 +85,7 @@ static void bench_color_sink_mt(benchmark::State& state) {
 
 // Bench basic file sink (single-threaded)
 static void bench_basic_file_st(benchmark::State& state) {
-    logger_st<sinks::basic_file_sink> log("bench", sinks::basic_file_sink{"latency_logs/basic_st.log", true});
+    logger_st<sinks::simple_file_sink> log("bench", sinks::simple_file_sink{"latency_logs/basic_st.log", true});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -94,7 +94,7 @@ static void bench_basic_file_st(benchmark::State& state) {
 
 // Bench basic file sink (multi-threaded)
 static void bench_basic_file_mt(benchmark::State& state) {
-    static logger_mt<sinks::basic_file_sink> log("bench", sinks::basic_file_sink{"latency_logs/basic_mt.log", true});
+    static logger_mt<sinks::simple_file_sink> log("bench", sinks::simple_file_sink{"latency_logs/basic_mt.log", true});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);

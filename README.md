@@ -43,16 +43,16 @@ Output:
 | `stderr_sink` | `sinks/stdout_sink.h` | Write to stderr |
 | `color_stdout` | `sinks/color_sink.h` | Colored stdout (Win32 API on Windows, ANSI on Linux/macOS) |
 | `color_stderr` | `sinks/color_sink.h` | Colored stderr |
-| `basic_file_sink` | `sinks/basic_file_sink.h` | Write to file |
+| `simple_file_sink` | `sinks/simple_file_sink.h` | Write to file |
 | `null_sink` | `sinks/null_sink.h` | Discard output |
 
 ## Multiple sinks
 ```c++
 using namespace spdlite;
-logger_st<sinks::color_stdout, sinks::basic_file_sink> log(
+logger_st<sinks::color_stdout, sinks::simple_file_sink> log(
     "app",
     sinks::color_stdout{},
-    sinks::basic_file_sink{"logs/app.txt"});
+    sinks::simple_file_sink{"logs/app.txt"});
 
 log.info("Color on console, plain text in file");
 ```
@@ -60,7 +60,7 @@ log.info("Color on console, plain text in file");
 ## Thread safety
 ```c++
 // multi-threaded — logger locks once per log call
-logger_mt<sinks::basic_file_sink> log("app", sinks::basic_file_sink{"app.log"});
+logger_mt<sinks::simple_file_sink> log("app", sinks::simple_file_sink{"app.log"});
 
 // single-threaded — zero locking overhead
 logger_st<sinks::stdout_sink> log("app");

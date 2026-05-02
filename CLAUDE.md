@@ -40,7 +40,7 @@ All code lives under `include/spdlite/` — there is no `.cpp` compilation.
 - **`sinks/`** — each sink is a simple struct with `write(const log_msg&)` and `flush()`, including only `common.h` from spdlite. The `log_msg` carries metadata plus two views into the logger's shared buffer: `formatted` (the whole line, header + payload + newline) and `payload` (the raw user message, no header, no newline). Sinks typically write `msg.formatted`; structured sinks (JSON, syslog, etc.) can read `msg.payload` directly. No base class — sinks are duck-typed template parameters.
   - `stdout_sink` / `stderr_sink` — plain `fwrite` to stdout/stderr.
   - `color_stdout` / `color_stderr` — inserts color around the level tag. Native Win32 `SetConsoleTextAttribute` on Windows, ANSI escape codes on Linux/macOS.
-  - `basic_file_sink` — `fopen`/`fwrite` with RAII via `unique_ptr<FILE>`. Creates parent directories automatically.
+  - `simple_file_sink` — `fopen`/`fwrite` with RAII via `unique_ptr<FILE>`. Creates parent directories automatically.
   - `null_sink` — discards output (used in benchmarks).
 - **`fmt/`** — vendored fmt 12.1.0 headers (`base.h`, `format.h`, `format-inl.h`). Do not edit these.
 

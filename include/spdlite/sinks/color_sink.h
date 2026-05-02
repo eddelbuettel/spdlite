@@ -7,6 +7,16 @@
 
 #include "../common.h"
 
+namespace spdlite::sinks {
+
+// Whether the color sink emits color codes or attributes.
+//   automatic — colors when the destination is a terminal, plain otherwise (default)
+//   always    — always emit colors, even when output is redirected to a file
+//   never     — never emit colors
+enum class color_mode { automatic, always, never };
+
+}  // namespace spdlite::sinks
+
 #ifdef _WIN32
 
 // ==================== Windows: native console API ====================
@@ -21,10 +31,10 @@ namespace spdlite::sinks {
 namespace detail {
 
 // uses SetConsoleTextAttribute + WriteConsoleA for colored output.
-// falls back to WriteFile when output is redirected to a file.
+// falls back to WriteFile when output is redirected to a file or color_mode is off.
 struct color_sink_base {
-    explicit color_sink_base(HANDLE handle)
-        : handle_(handle) {
+    explicit color_sink_base(HANDLE handle, color_mode mode = color_mode::automatic)
+        : handle_(handle), mode_(mode) {
         // detect if we're writing to a real console
         DWORD console_mode = 0;
         is_console_ = ::GetConsoleMode(handle_, &console_mode) != 0;
@@ -43,6 +53,13 @@ struct color_sink_base {
         colors_[static_cast<std::size_t>(level::critical)] =
             BACKGROUND_RED | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
         colors_[static_cast<std::size_t>(level::off)] = 0;
+
+        update_should_color_();
+    }
+
+    void set_color_mode(color_mode mode) noexcept {
+        mode_ = mode;
+        update_should_color_();
     }
 
     void write(const log_msg &msg) {
@@ -51,8 +68,20 @@ struct color_sink_base {
         const char *data = msg.formatted.data();
         auto size = msg.formatted.size();
 
+        // plain path — either color_mode::never, or automatic+redirected
+        if (!should_color_) {
+            if (is_console_)
+                write_console_(data, size);
+            else {
+                DWORD written = 0;
+                ::WriteFile(handle_, data, static_cast<DWORD>(size), &written, nullptr);
+            }
+            return;
+        }
+
+        // SetConsoleTextAttribute only works against a real console; if the user
+        // forced color_mode::always and output is redirected, drop back to plain.
         if (!is_console_) {
-            // redirected to file — write plain text
             DWORD written = 0;
             ::WriteFile(handle_, data, static_cast<DWORD>(size), &written, nullptr);
             return;
@@ -78,9 +107,19 @@ struct color_sink_base {
 
 private:
     HANDLE handle_;
+    color_mode mode_;
     WORD orig_attribs_{FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE};
     bool is_console_{false};
+    bool should_color_{false};
     std::array<WORD, levels_count> colors_{};
+
+    void update_should_color_() noexcept {
+        switch (mode_) {
+            case color_mode::always:    should_color_ = true; break;
+            case color_mode::never:     should_color_ = false; break;
+            case color_mode::automatic: should_color_ = is_console_; break;
+        }
+    }
 
     void write_console_(const char *data, std::size_t size) {
         if (size > 0) {
@@ -93,11 +132,13 @@ private:
 }  // namespace detail
 
 struct color_stdout : detail::color_sink_base {
-    color_stdout() : color_sink_base(::GetStdHandle(STD_OUTPUT_HANDLE)) {}
+    explicit color_stdout(color_mode mode = color_mode::automatic)
+        : color_sink_base(::GetStdHandle(STD_OUTPUT_HANDLE), mode) {}
 };
 
 struct color_stderr : detail::color_sink_base {
-    color_stderr() : color_sink_base(::GetStdHandle(STD_ERROR_HANDLE)) {}
+    explicit color_stderr(color_mode mode = color_mode::automatic)
+        : color_sink_base(::GetStdHandle(STD_ERROR_HANDLE), mode) {}
 };
 
 }  // namespace spdlite::sinks
@@ -108,6 +149,7 @@ struct color_stderr : detail::color_sink_base {
 
 #include <cstdio>
 #include <string_view>
+#include <unistd.h>  // for isatty / fileno
 
 namespace spdlite::sinks {
 
@@ -126,8 +168,8 @@ namespace detail {
 // wraps ANSI escape codes around the 1-char level tag in the formatted output.
 // rebuilds the line into cbuf_ with: [prefix][color][LVL][reset][rest].
 struct color_sink_base {
-    explicit color_sink_base(std::FILE *file)
-        : file_(file) {
+    explicit color_sink_base(std::FILE *file, color_mode mode = color_mode::automatic)
+        : file_(file), mode_(mode) {
         colors_[static_cast<std::size_t>(level::trace)] = ansi_color::white;
         colors_[static_cast<std::size_t>(level::debug)] = ansi_color::cyan;
         colors_[static_cast<std::size_t>(level::info)] = ansi_color::green;
@@ -135,11 +177,25 @@ struct color_sink_base {
         colors_[static_cast<std::size_t>(level::err)] = ansi_color::red_bold;
         colors_[static_cast<std::size_t>(level::critical)] = ansi_color::bold_on_red;
         colors_[static_cast<std::size_t>(level::off)] = ansi_color::reset;
+
+        is_tty_ = ::isatty(::fileno(file_)) != 0;
+        update_should_color_();
+    }
+
+    void set_color_mode(color_mode mode) noexcept {
+        mode_ = mode;
+        update_should_color_();
     }
 
     void write(const log_msg &msg) {
         const char *data = msg.formatted.data();
         auto size = msg.formatted.size();
+
+        if (!should_color_) {
+            fwrite_bytes(data, size, file_);
+            return;
+        }
+
         auto color = colors_[static_cast<std::size_t>(msg.log_level)];
         constexpr std::size_t level_size = 1;
         auto level_start = msg.logger_name.empty() ? 27 : 27 + msg.logger_name.size() + 3;
@@ -160,18 +216,29 @@ struct color_sink_base {
 
 private:
     std::FILE *file_;
+    color_mode mode_;
+    bool is_tty_{false};
+    bool should_color_{false};
     memory_buf_t cbuf_;
     std::array<std::string_view, levels_count> colors_{};
+
+    void update_should_color_() noexcept {
+        switch (mode_) {
+            case color_mode::always:    should_color_ = true; break;
+            case color_mode::never:     should_color_ = false; break;
+            case color_mode::automatic: should_color_ = is_tty_; break;
+        }
+    }
 };
 
 }  // namespace detail
 
 struct color_stdout : detail::color_sink_base {
-    color_stdout() : color_sink_base(stdout) {}
+    explicit color_stdout(color_mode mode = color_mode::automatic) : color_sink_base(stdout, mode) {}
 };
 
 struct color_stderr : detail::color_sink_base {
-    color_stderr() : color_sink_base(stderr) {}
+    explicit color_stderr(color_mode mode = color_mode::automatic) : color_sink_base(stderr, mode) {}
 };
 
 }  // namespace spdlite::sinks

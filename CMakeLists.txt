@@ -14,7 +14,7 @@ set(SPDLITE_HEADERS
     include/spdlite/common.h
     include/spdlite/formatter.h
     include/spdlite/spdlite.h
-    include/spdlite/sinks/basic_file_sink.h
+    include/spdlite/sinks/simple_file_sink.h
     include/spdlite/sinks/null_sink.h
     include/spdlite/sinks/stdout_sink.h
     include/spdlite/sinks/color_sink.h)

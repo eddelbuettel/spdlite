@@ -23,8 +23,8 @@ struct file_closer {
 
 // fopen/fwrite with RAII. Creates parent directories automatically.
 // Uses _wfopen on Windows for proper Unicode path support.
-struct basic_file_sink {
-    explicit basic_file_sink(const std::filesystem::path &filename, bool truncate = false) {
+struct simple_file_sink {
+    explicit simple_file_sink(const std::filesystem::path &filename, bool truncate = false) {
         if (auto parent = filename.parent_path(); !parent.empty()) {
             std::filesystem::create_directories(parent);
         }
