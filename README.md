@@ -18,7 +18,7 @@ To skip the bundled fmt and use `<format>` instead, define
 
 int main() {
     using namespace spdlite;
-    logger_st<sinks::color_stdout> log("app");
+    logger_st<sinks::console> log("app");
 
     log.info("Hello {}", "world");
     log.info("Value: {}", 42);
@@ -41,17 +41,17 @@ Output:
 |------|--------|-------------|
 | `stdout_sink` | `sinks/stdout_sink.h` | Write to stdout |
 | `stderr_sink` | `sinks/stdout_sink.h` | Write to stderr |
-| `color_stdout` | `sinks/color_sink.h` | Colored stdout (Win32 API on Windows, ANSI on Linux/macOS) |
-| `color_stderr` | `sinks/color_sink.h` | Colored stderr |
+| `console` | `sinks/color_sink.h` | Colored stdout (Win32 API on Windows, ANSI on Linux/macOS) |
+| `console_err` | `sinks/color_sink.h` | Colored stderr |
 | `simple_file_sink` | `sinks/simple_file_sink.h` | Write to file |
 | `null_sink` | `sinks/null_sink.h` | Discard output |
 
 ## Multiple sinks
 ```c++
 using namespace spdlite;
-logger_st<sinks::color_stdout, sinks::simple_file_sink> log(
+logger_st<sinks::console, sinks::simple_file_sink> log(
     "app",
-    sinks::color_stdout{},
+    sinks::console{},
     sinks::simple_file_sink{"logs/app.txt"});
 
 log.info("Color on console, plain text in file");
@@ -92,7 +92,7 @@ $ cmake -DCMAKE_CXX_FLAGS="-DSPDLITE_USE_STD_FORMAT" ..
 
 ## Nameless logger
 ```c++
-logger_st<sinks::color_stdout> log;
+logger_st<sinks::console> log;
 log.info("No name in the output");
 ```
 ```

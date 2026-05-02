@@ -51,7 +51,7 @@ public:
           formatter_(name_),
           sinks_(std::move(sinks)...) {}
 
-    // default-construct sinks (e.g. color_stdout)
+    // default-construct sinks (e.g. console)
     explicit logger(std::string name) requires(sizeof...(Sinks) > 0)
         : name_(std::move(name)),
           formatter_(name_) {}

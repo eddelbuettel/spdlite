@@ -131,13 +131,13 @@ private:
 
 }  // namespace detail
 
-struct color_stdout : detail::color_sink_base {
-    explicit color_stdout(color_mode mode = color_mode::automatic)
+struct console : detail::color_sink_base {
+    explicit console(color_mode mode = color_mode::automatic)
         : color_sink_base(::GetStdHandle(STD_OUTPUT_HANDLE), mode) {}
 };
 
-struct color_stderr : detail::color_sink_base {
-    explicit color_stderr(color_mode mode = color_mode::automatic)
+struct console_err : detail::color_sink_base {
+    explicit console_err(color_mode mode = color_mode::automatic)
         : color_sink_base(::GetStdHandle(STD_ERROR_HANDLE), mode) {}
 };
 
@@ -233,12 +233,12 @@ private:
 
 }  // namespace detail
 
-struct color_stdout : detail::color_sink_base {
-    explicit color_stdout(color_mode mode = color_mode::automatic) : color_sink_base(stdout, mode) {}
+struct console : detail::color_sink_base {
+    explicit console(color_mode mode = color_mode::automatic) : color_sink_base(stdout, mode) {}
 };
 
-struct color_stderr : detail::color_sink_base {
-    explicit color_stderr(color_mode mode = color_mode::automatic) : color_sink_base(stderr, mode) {}
+struct console_err : detail::color_sink_base {
+    explicit console_err(color_mode mode = color_mode::automatic) : color_sink_base(stderr, mode) {}
 };
 
 }  // namespace spdlite::sinks

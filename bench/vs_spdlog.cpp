@@ -88,7 +88,7 @@ static void spdlog_null_cstr_st(benchmark::State& state) {
 // --- color stdout (single-threaded) ---
 
 static void spdlite_color_st(benchmark::State& state) {
-    spdlite::logger_st<spdlite::sinks::color_stdout> log("bench");
+    spdlite::logger_st<spdlite::sinks::console> log("bench");
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -107,7 +107,7 @@ static void spdlog_color_st(benchmark::State& state) {
 // --- color stdout (multi-threaded) ---
 
 static void spdlite_color_mt(benchmark::State& state) {
-    static spdlite::logger_mt<spdlite::sinks::color_stdout> log("bench");
+    static spdlite::logger_mt<spdlite::sinks::console> log("bench");
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);

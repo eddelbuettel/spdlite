@@ -22,7 +22,7 @@ int main() {
 // Print an ASCII banner with the spdlite version through a colored console logger.
 void banner() {
     using namespace spdlite;
-    logger_st<sinks::color_stdout> console;
+    logger_st<sinks::console> console;
     console.info(R"(
                 ____ ___ __
    _________  ____/ / (.) /____
@@ -37,15 +37,17 @@ void banner() {
 // Walk all log levels through a colored console logger.
 // By default the threshold is info; enable trace explicitly to see everything.
 void log_levels() {
-    using namespace spdlite;
-    logger_st<sinks::color_stdout> console;
-    console.log_level(level::trace);
-    console.trace("This is a {} message", "trace");
-    console.debug("This is a {} message", "debug");
-    console.info("This is a {} message", "info");
-    console.warn("This is a {} message", "warning");
-    console.error("This is a {} message", "error");
-    console.critical("This is a {} message", "critical");
+    for (int i = 0; i < 100000; ++i) {
+        using namespace spdlite;
+        logger_st<sinks::console> console;        
+        console.log_level(level::trace);
+        console.trace("{} This is a {} message", i, "trace");
+        console.debug("{} This is a {} message", i,"debug");
+        console.info("{} This is a {} message", i,"info");
+        console.warn("{} This is a {} message", i,"warning");
+        console.error("{} This is a {} message", i,"error");
+        console.critical("{} This is a {} message", i,"critical");
+    }
 }
 
 // Log to a file via simple_file_sink. The sink creates parent directories
@@ -60,9 +62,9 @@ void file_sink_example() {
 // Compose multiple sinks into one logger — a single log call writes to all of them.
 void multi_sink_example() {
     using namespace spdlite;
-    logger_st<sinks::color_stdout, sinks::simple_file_sink> multi(
+    logger_st<sinks::console, sinks::simple_file_sink> multi(
         "my_logger",
-        sinks::color_stdout{},
+        sinks::console{},
         sinks::simple_file_sink{"logs/multi.txt", true});
     multi.info("This goes to both console and file");
 }
