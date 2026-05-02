@@ -13,11 +13,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(SPDLITE_HEADERS
     include/spdlite/common.h
     include/spdlite/formatter.h
-    include/spdlite/logger.h
+    include/spdlite/spdlite.h
     include/spdlite/sinks/basic_file_sink.h
     include/spdlite/sinks/null_sink.h
     include/spdlite/sinks/stdout_sink.h
-    include/spdlite/sinks/stdout_color_sink.h)
+    include/spdlite/sinks/color_sink.h)
 
 # spdlite is header-only (fmt bundled)
 add_library(spdlite INTERFACE)
@@ -35,6 +35,13 @@ if(SPDLITE_BUILD_EXAMPLE)
     add_executable(example example/example.cpp ${SPDLITE_HEADERS})
     source_group("Header Files\\spdlite" FILES ${SPDLITE_HEADERS})
     target_link_libraries(example PRIVATE spdlite)
+endif()
+
+# Caller-zoo: synthetic stress for measuring per-callsite cost (binary size, compile time).
+option(SPDLITE_BUILD_CALLER_ZOO "Build caller_zoo stress executable" OFF)
+if(SPDLITE_BUILD_CALLER_ZOO)
+    add_executable(caller_zoo bench/caller_zoo.cpp)
+    target_link_libraries(caller_zoo PRIVATE spdlite)
 endif()
 
 # Benchmarks

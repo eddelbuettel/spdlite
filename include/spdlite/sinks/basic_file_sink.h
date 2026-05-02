@@ -39,7 +39,7 @@ struct basic_file_sink {
         }
     }
 
-    void write(const char *data, std::size_t size, const log_msg &) { fwrite_bytes(data, size, file_.get()); }
+    void write(const log_msg &msg) { fwrite_bytes(msg.formatted.data(), msg.formatted.size(), file_.get()); }
     void flush() { std::fflush(file_.get()); }
 
 private:

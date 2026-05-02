@@ -9,7 +9,7 @@ namespace spdlite::sinks {
 
 // discards all output — useful for benchmarking the format path without I/O
 struct null_sink {
-    void write(const char *, std::size_t, const log_msg &) {}
+    void write(const log_msg &) {}
     void flush() {}
 };
 

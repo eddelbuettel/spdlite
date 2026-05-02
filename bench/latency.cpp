@@ -11,11 +11,10 @@
 #include <iostream>
 
 #include "benchmark/benchmark.h"
-#include "spdlite/formatter.h"
-#include "spdlite/logger.h"
+#include "spdlite/spdlite.h"
 #include "spdlite/sinks/basic_file_sink.h"
 #include "spdlite/sinks/null_sink.h"
-#include "spdlite/sinks/stdout_color_sink.h"
+#include "spdlite/sinks/color_sink.h"
 
 using namespace spdlite;
 
@@ -50,7 +49,7 @@ static void bench_null_sink_formatted(benchmark::State& state) {
 // Bench with logger disabled at runtime
 static void bench_disabled_runtime(benchmark::State& state) {
     logger_st<sinks::null_sink> log("bench");
-    log.set_level(level::off);
+    log.log_level(level::off);
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -68,7 +67,7 @@ static void bench_null_sink_mt(benchmark::State& state) {
 
 // Bench color stdout sink (single-threaded)
 static void bench_color_sink_st(benchmark::State& state) {
-    logger_st<sinks::stdout_color_sink> log("bench");
+    logger_st<sinks::color_stdout> log("bench");
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -77,7 +76,7 @@ static void bench_color_sink_st(benchmark::State& state) {
 
 // Bench color stdout sink (multi-threaded)
 static void bench_color_sink_mt(benchmark::State& state) {
-    static logger_mt<sinks::stdout_color_sink> log("bench");
+    static logger_mt<sinks::color_stdout> log("bench");
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -104,12 +103,18 @@ static void bench_basic_file_mt(benchmark::State& state) {
 
 // Bench just the formatter (no I/O)
 static void bench_formatter_only(benchmark::State& state) {
-    simple_formatter formatter;
+    simple_formatter formatter("bench");
     memory_buf_t buf;
-    log_msg msg("bench", level::info, "Hello logger: msg number 12345...............");
+    auto now = log_clock::now();
+    string_view_t payload = "Hello logger: msg number 12345...............";
     for (auto _ : state) {
         buf.clear();
-        formatter.format(msg, buf);
+        formatter.format_header(now, level::info, buf);
+        buf.append(payload.data(), payload.data() + payload.size());
+#ifdef _WIN32
+        buf.push_back('\r');
+#endif
+        buf.push_back('\n');
         benchmark::DoNotOptimize(buf.data());
     }
 }
@@ -139,9 +144,9 @@ int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
     std::cout.rdbuf(std::cerr.rdbuf());
 #ifdef _WIN32
-    std::freopen("NUL", "w", stdout);
+    (void)std::freopen("NUL", "w", stdout);
 #else
-    std::freopen("/dev/null", "w", stdout);
+    (void)std::freopen("/dev/null", "w", stdout);
 #endif
 
     benchmark::RunSpecifiedBenchmarks();

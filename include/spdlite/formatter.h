@@ -29,18 +29,18 @@ inline void put4(char* dst, int n) {
     dst[3] = static_cast<char>('0' + n % 10);
 }
 
-// Fixed format: [YYYY-MM-DD HH:MM:SS.mmm] [name] [LVL] payload\n
-// When name is empty: [YYYY-MM-DD HH:MM:SS.mmm] [LVL] payload\n
+// Fixed format: [YYYY-MM-DD HH:MM:SS.mmm] [name] [L] payload\n
+// When name is empty: [YYYY-MM-DD HH:MM:SS.mmm] [L] payload\n
 //
 // Caches the entire header as a single string.
-// Per-call: patch 3 millis bytes + 3 level bytes, one memcpy for header, append payload + '\n'.
+// Per-call: patch 3 millis bytes + 1 level byte, one memcpy for header, append payload + '\n'.
 struct simple_formatter {
     explicit simple_formatter(string_view_t logger_name = {}) { rebuild_header(logger_name); }
 
     void set_logger_name(string_view_t name) { rebuild_header(name); }
-    
-    // append "[YYYY-MM-DD HH:MM:SS.mmm] [name] [LVL] " to dest.
-    // only the millis (3 bytes) and level (3 bytes) are patched per call.
+
+    // append "[YYYY-MM-DD HH:MM:SS.mmm] [name] [L] " to dest.
+    // only the millis (3 bytes) and level (1 byte) are patched per call.
     // the full timestamp (date + h:m:s) is rebuilt only when the second changes.
     void format_header(log_clock::time_point time, level lvl, memory_buf_t& dest) {
         using namespace std::chrono;
@@ -55,23 +55,11 @@ struct simple_formatter {
             rebuild_timestamp(static_cast<std::time_t>(secs.count()));
         }
 
-        // patch millis and level in the cached header — 6 byte writes total
+        // patch millis and level in the cached header — 4 byte writes total
         put3(header_.data() + millis_offset_, static_cast<int>(millis.count()));
-        auto lv = to_string_view(lvl);
-        header_[level_offset_] = lv[0];
-        header_[level_offset_ + 1] = lv[1];
-        header_[level_offset_ + 2] = lv[2];
+        header_[level_offset_] = to_string_view(lvl)[0];
 
         dest.append(header_.data(), header_.data() + header_.size());
-    }
-
-    void format(const log_msg& msg, memory_buf_t& dest) {
-        format_header(msg.time, msg.log_level, dest);
-        dest.append(msg.payload.data(), msg.payload.data() + msg.payload.size());
-#ifdef _WIN32
-        dest.push_back('\r');
-#endif
-        dest.push_back('\n');
     }
 
     // Offset where the level starts in formatted output (for color sinks)
@@ -79,7 +67,7 @@ struct simple_formatter {
 
 private:
     static constexpr std::size_t millis_offset_ = 21;
-    // header: "[YYYY-MM-DD HH:MM:SS.mmm] [name] [LVL] "
+    // header: "[YYYY-MM-DD HH:MM:SS.mmm] [name] [L] "
     std::string header_;
     std::size_t level_offset_{};
     std::chrono::seconds last_secs_{};
@@ -94,8 +82,8 @@ private:
         }
         header_.push_back('[');
         level_offset_ = header_.size();
-        header_.append("INF] ");  // placeholder level
-        last_secs_ = {};          // force timestamp rebuild on next format
+        header_.append("I] ");  // placeholder level (1 char)
+        last_secs_ = {};        // force timestamp rebuild on next format
     }
 
     void rebuild_timestamp(std::time_t time_t_val) {

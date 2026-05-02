@@ -1,43 +1,53 @@
-// spdlite example
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026, Gabi Melman
 
-#include "spdlite/logger.h"
 #include "spdlite/sinks/basic_file_sink.h"
-#include "spdlite/sinks/stdout_color_sink.h"
+#include "spdlite/sinks/color_sink.h"
 #include "spdlite/sinks/stdout_sink.h"
+#include "spdlite/spdlite.h"
+
+void log_levels();
 
 int main() {
     using namespace spdlite;
-    // Color console logger (single-threaded)
-    logger_st<sinks::stdout_color_sink> console("app");
-    console.info("Hello {}", "world");
-    console.info("Value: {}", 42);
-    console.debug("This should not appear (level is info)");
+    using sinks::color_stdout;
+    using sinks::basic_file_sink;   
 
-    console.set_level(level::trace);
-    console.trace("Trace message");
-    console.debug("Debug message");
-    console.info("Info message");
-    console.warn("Warning message");
-    console.error("Error message");
-    console.critical("Critical message");
+    // Color console logger (single-threaded)
+    logger_st<color_stdout> console;
+    console.info(R"(
+                ____ ___ __
+   _________  ____/ / (.) /____
+  / ___/ __ \/ __  / / / __/ _ \
+ (__  ) /_/ / /_/ / / / /_/  __/
+/____/ .___/\__,_/_/_/\__/\___/   v{}.{}.{}
+    /_/
+)",
+                 SPDLITE_VER_MAJOR, SPDLITE_VER_MINOR, SPDLITE_VER_PATCH);
 
     // File logger
-    logger_st<sinks::basic_file_sink> file_logger("file", sinks::basic_file_sink{"logs/example.txt", true});
-    file_logger.info("Written to file");
-    file_logger.error("Error written to file: {}", 404);
+    logger_st<basic_file_sink> file_logger("my_logger", basic_file_sink{"logs/example.txt", true});
+    file_logger.info("This is a log message in the file");
 
     // Multiple sinks — color console + file
-    logger_st<sinks::stdout_color_sink, sinks::basic_file_sink> multi("multi", sinks::stdout_color_sink{},
-                                                                      sinks::basic_file_sink{"logs/multi.txt", true});
-    multi.info("Goes to both console and file");
-    multi.warn("Warning: {}", "something happened");
+    logger_st<color_stdout, basic_file_sink> multi("my_logger", color_stdout{},
+                                                   basic_file_sink{"logs/multi.txt", true});
+    multi.info("This goes to both console and file");
 
-    // String view overload (no formatting)
-    console.info("Plain string, no formatting");
-
-    // Logger without a name
-    logger_st<sinks::stdout_color_sink> anon;
-    anon.info("No logger name in the output");
-
+    log_levels();
     return 0;
+}
+
+// Log messages at different levels.
+// By default, levels>=info are enabled, but this can be configured at compile-time or runtime.
+void log_levels() {    
+    using spdlite::sinks::color_stdout;
+    using spdlite::logger_st<color_stdout> console;
+    console.log_level(level::trace);  // enable trace and above
+    console.trace("This is a {} message", "trace");
+    console.debug("This is a {} message", "debug");
+    console.info("This is a {} message", "info");
+    console.warn("This is a {} message", "warning");
+    console.error("This is a {} message", "error");
+    console.critical("This is a {} message", "critical");
 }

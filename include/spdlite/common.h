@@ -3,14 +3,17 @@
 
 #pragma once
 
+// Minimal types shared by spdlite.h and the sinks. Designed so a sink header
+// can include just this file rather than the whole logger template.
+
 #define SPDLITE_VER_MAJOR 0
 #define SPDLITE_VER_MINOR 1
 #define SPDLITE_VER_PATCH 0
 
 #include <array>
-#include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <string>
 #include <string_view>
@@ -30,19 +33,10 @@ namespace spdlite {
 using log_clock = std::chrono::system_clock;
 using string_view_t = std::string_view;
 
-
-#ifdef SPDLITE_USE_STD_FORMAT
-template <typename... Args>
-using format_string_t = std::format_string<Args...>;
-#else
-template <typename... Args>
-using format_string_t = fmt::format_string<Args...>;
-#endif
-
 #ifdef SPDLITE_USE_STD_FORMAT
 
-// Stack-allocated buffer with heap fallback. Used as memory_buf_t when SPDLITE_USE_STD_FORMAT
-// is defined (replacing fmt::basic_memory_buffer which is not available).
+// Stack-allocated buffer with heap fallback. Used as memory_buf_t when
+// SPDLITE_USE_STD_FORMAT is defined (replacing fmt::basic_memory_buffer).
 // Typical log lines are ~120 bytes, so 250 bytes covers most without heap allocation.
 template <std::size_t StackSize = 250>
 class stack_buf {
@@ -135,19 +129,17 @@ using memory_buf_t = fmt::basic_memory_buffer<char, 250>;
 
 enum class level : std::uint8_t { trace = 0, debug = 1, info = 2, warn = 3, err = 4, critical = 5, off = 6, n_levels = 7 };
 
-using atomic_level_t = std::atomic<level>;
-
 constexpr auto levels_count = static_cast<std::size_t>(level::n_levels);
 
-// fixed 3-char abbreviations — the formatter patches these directly into the cached header
-constexpr std::array<std::string_view, levels_count> level_names{"trc", "dbg", "inf", "wrn", "err", "crt", "off"};
+// fixed single-char tags — the formatter patches one byte directly into the cached header
+constexpr std::array<std::string_view, levels_count> level_names{"T", "D", "I", "W", "E", "C", "O"};
 static_assert(
     [] {
         for (const auto& name : level_names)
-            if (name.size() != 3) return false;
+            if (name.size() != 1) return false;
         return true;
     }(),
-    "all level names must be 3 chars");
+    "all level names must be 1 char");
 
 [[nodiscard]] constexpr std::string_view to_string_view(level lvl) noexcept { return level_names[static_cast<std::size_t>(lvl)]; }
 
@@ -162,32 +154,25 @@ inline bool fwrite_bytes(const void *ptr, std::size_t n, std::FILE *fp) {
 #endif
 }
 
-// no-op mutex for logger_st — satisfies BasicLockable, optimized away completely
-struct null_mutex {
-    void lock() noexcept {}
-    void unlock() noexcept {}
-};
-
-// lightweight message descriptor passed to sinks — all views, no ownership
+// lightweight message descriptor passed to sinks — all views, no ownership.
+// `formatted` covers the whole line the logger produced (header + payload + newline).
+// `payload` is the raw user message, no header, no trailing newline.
 struct log_msg {
     log_clock::time_point time;
     string_view_t logger_name;
     level log_level{level::off};
+    string_view_t formatted;
     string_view_t payload;
 
     log_msg() = default;
 
-    log_msg(log_clock::time_point log_time, string_view_t name, level lvl, string_view_t msg)
+    log_msg(log_clock::time_point log_time, string_view_t name, level lvl,
+            string_view_t line, string_view_t raw)
         : time(log_time),
           logger_name(name),
           log_level(lvl),
-          payload(msg) {}
-
-    log_msg(string_view_t name, level lvl, string_view_t msg)
-        : time(log_clock::now()),
-          logger_name(name),
-          log_level(lvl),
-          payload(msg) {}
+          formatted(line),
+          payload(raw) {}
 };
 
 }  // namespace spdlite

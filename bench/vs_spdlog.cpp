@@ -9,10 +9,10 @@
 #include "benchmark/benchmark.h"
 
 // spdlite
-#include "spdlite/logger.h"
+#include "spdlite/spdlite.h"
 #include "spdlite/sinks/basic_file_sink.h"
 #include "spdlite/sinks/null_sink.h"
-#include "spdlite/sinks/stdout_color_sink.h"
+#include "spdlite/sinks/color_sink.h"
 
 // spdlog
 #include "spdlog/version.h"
@@ -25,7 +25,7 @@
 
 static void spdlite_disabled(benchmark::State& state) {
     spdlite::logger_st<spdlite::sinks::null_sink> log("bench");
-    log.set_level(spdlite::level::off);
+    log.log_level(spdlite::level::off);
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -88,7 +88,7 @@ static void spdlog_null_cstr_st(benchmark::State& state) {
 // --- color stdout (single-threaded) ---
 
 static void spdlite_color_st(benchmark::State& state) {
-    spdlite::logger_st<spdlite::sinks::stdout_color_sink> log("bench");
+    spdlite::logger_st<spdlite::sinks::color_stdout> log("bench");
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -107,7 +107,7 @@ static void spdlog_color_st(benchmark::State& state) {
 // --- color stdout (multi-threaded) ---
 
 static void spdlite_color_mt(benchmark::State& state) {
-    static spdlite::logger_mt<spdlite::sinks::stdout_color_sink> log("bench");
+    static spdlite::logger_mt<spdlite::sinks::color_stdout> log("bench");
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
