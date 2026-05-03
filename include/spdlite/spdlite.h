@@ -3,10 +3,6 @@
 
 #pragma once
 
-// Public include. Pulls in the minimal types from common.h, the formatter,
-// and adds the logger template + the format-string aliases users see.
-// Sinks include common.h directly - they don't need this file.
-
 #include <atomic>
 #include <cstdio>
 #include <iterator>
