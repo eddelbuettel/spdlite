@@ -1,6 +1,6 @@
 // Synthetic stress for measuring per-callsite cost of the templated logging API.
 // Uses Tag<N> to mint dozens of unique types via macro repetition, so each
-// log call site has a distinct Args... pack — the worst case for template
+// log call site has a distinct Args... pack - the worst case for template
 // instantiation bloat. ~83 unique packs × 6 levels = ~498 log calls.
 //
 // Build: cmake -B build -DSPDLITE_BUILD_CALLER_ZOO=ON .
@@ -10,7 +10,7 @@
 //   - compile time: time the cmake --build invocation
 //
 // Note: fmt-mode only. The Tag<N> formatter specializes fmt::formatter,
-// not std::formatter — building with -DSPDLITE_USE_STD_FORMAT will fail.
+// not std::formatter - building with -DSPDLITE_USE_STD_FORMAT will fail.
 
 #include "spdlite/spdlite.h"
 #include "spdlite/sinks/stdout_sink.h"
@@ -53,7 +53,7 @@ struct fmt::formatter<Tag<N>> : fmt::formatter<int> {
 #define TWO(N)   ZOO_ALL_LEVELS("d{}: {} {}",    N, Tag<(N)>{}, Tag<(N) + 10000>{});
 #define THREE(N) ZOO_ALL_LEVELS("t{}: {} {} {}", N, Tag<(N)>{}, Tag<(N) + 20000>{}, Tag<(N) + 30000>{});
 
-// Repetition primitives — preprocessor doesn't do arithmetic, but the C++
+// Repetition primitives - preprocessor doesn't do arithmetic, but the C++
 // compiler evaluates `(N) + k` as a constant when stamping out Tag<...>,
 // so each expansion below produces a distinct integer template argument.
 #define R10(M, N)                                      \
@@ -68,7 +68,7 @@ int main() {
     using namespace spdlite;
     // stdout_sink + level::trace: every call actually formats and writes at
     // runtime, so the compiler cannot prove the bodies dead via the level check.
-    // (We don't run this binary for the measurement — only build it.)
+    // (We don't run this binary for the measurement - only build it.)
     logger_st<stdout_sink> log;
     log.log_level(level::trace);
 
@@ -81,8 +81,8 @@ int main() {
     // 10 unique 3-arg packs × 6 levels = 60 calls
     R10(THREE, 0)
 
-    // 13 mixed-builtin-type packs × 6 levels = 78 calls — plus the 420 above ≈ 498 total
-    // (the realistic part — actual user types and arities)
+    // 13 mixed-builtin-type packs × 6 levels = 78 calls - plus the 420 above ≈ 498 total
+    // (the realistic part - actual user types and arities)
     const std::string s{"hello"};
     const std::string_view sv{"world"};
     ZOO_ALL_LEVELS("m01 {}", static_cast<int>(1));

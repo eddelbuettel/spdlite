@@ -10,9 +10,9 @@
 namespace spdlite {
 
 // Whether the color sink emits color codes or attributes.
-//   automatic — colors when the destination is a terminal, plain otherwise (default)
-//   always    — always emit colors, even when output is redirected to a file
-//   never     — never emit colors
+//   automatic - colors when the destination is a terminal, plain otherwise (default)
+//   always    - always emit colors, even when output is redirected to a file
+//   never     - never emit colors
 enum class color_mode { automatic, always, never };
 
 }  // namespace spdlite
@@ -68,7 +68,7 @@ struct color_sink_base {
         const char *data = msg.formatted.data();
         auto size = msg.formatted.size();
 
-        // plain path — either color_mode::never, or automatic+redirected
+        // plain path - either color_mode::never, or automatic+redirected
         if (!should_color_) {
             if (is_console_)
                 write_console_(data, size);

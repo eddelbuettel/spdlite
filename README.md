@@ -1,13 +1,10 @@
 # spdlite
 
-A small, header-only C++20 logger — the lite version of [spdlog](https://github.com/gabime/spdlog). Drop in, log, ship.
+A small, header-only C++20 logger - the lite version of [spdlog](https://github.com/gabime/spdlog), simpler, smaller, fewer features.
 
 ## Install
 
 Just copy the `include/spdlite/` folder into to your build tree.
-
-
-
 
 ## Quick start
 ```c++
@@ -57,10 +54,10 @@ log.info("Color on console, plain text in file");
 
 ## Thread safety
 ```c++
-// multi-threaded — logger locks once per log call
+// multi-threaded - logger locks once per log call
 logger_mt<file_sink> log("app", file_sink{"app.log"});
 
-// single-threaded — zero locking overhead
+// single-threaded - zero locking overhead
 logger_st<stdout_sink> log("app");
 ```
 

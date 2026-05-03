@@ -56,7 +56,7 @@ void file_sink_example() {
     file_logger.info("This message is written to logs/example.txt");
 }
 
-// Compose multiple sinks into one logger — a single log call writes to all of them.
+// Compose multiple sinks into one logger - a single log call writes to all of them.
 void multi_sink_example() {
     using namespace spdlite;
     logger_st<console_sink, file_sink> multi("my_logger", console_sink{}, file_sink{"logs/multi.txt", true});

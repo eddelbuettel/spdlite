@@ -7,7 +7,7 @@
 
 namespace spdlite {
 
-// discards all output — useful for benchmarking the format path without I/O
+// discards all output - useful for benchmarking the format path without I/O
 struct null_sink {
     void write(const log_msg &) {}
     void flush() {}

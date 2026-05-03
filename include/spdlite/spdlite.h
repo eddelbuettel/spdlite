@@ -5,7 +5,7 @@
 
 // Public include. Pulls in the minimal types from common.h, the formatter,
 // and adds the logger template + the format-string aliases users see.
-// Sinks include common.h directly — they don't need this file.
+// Sinks include common.h directly - they don't need this file.
 
 #include <atomic>
 #include <cstdio>
@@ -34,13 +34,13 @@ using format_string_view_t = fmt::string_view;
 
 using atomic_level_t = std::atomic<level>;
 
-// no-op mutex for logger_st — satisfies BasicLockable, optimized away completely
+// no-op mutex for logger_st - satisfies BasicLockable, optimized away completely
 struct null_mutex {
     void lock() noexcept {}
     void unlock() noexcept {}
 };
 
-// Variadic-template logger. Sinks are compile-time parameters — no virtual dispatch.
+// Variadic-template logger. Sinks are compile-time parameters - no virtual dispatch.
 // Mutex selects thread safety: std::mutex for multi-threaded, null_mutex for single-threaded.
 // All formatting and sink dispatch happens under a single lock (buf_ is shared state).
 template <typename Mutex, typename... Sinks>
@@ -58,7 +58,7 @@ public:
     //
     // The source is left in a safe but inert state: its level is set to off,
     // so any subsequent call on the moved-from logger short-circuits via
-    // should_log() and does nothing — no crashes, no spurious output. The
+    // should_log() and does nothing - no crashes, no spurious output. The
     // destination keeps the original level.
     logger(logger&& other) noexcept
         : name_(std::move(other.name_)),
@@ -83,7 +83,7 @@ public:
         if (should_log(lvl)) log_sv_(lvl, msg);
     }
 
-    // Per-level convenience overloads — forward to log() with a compile-time level.
+    // Per-level convenience overloads - forward to log() with a compile-time level.
     template <typename... Args>
     void trace(format_string_t<Args...> fmt, Args&&... args) const noexcept {
         log(level::trace, fmt, std::forward<Args>(args)...);
@@ -109,7 +109,7 @@ public:
         log(level::critical, fmt, std::forward<Args>(args)...);
     }
 
-    // string_view overloads — no formatting, just header + payload
+    // string_view overloads - no formatting, just header + payload
     void trace(string_view_t msg) const noexcept { log(level::trace, msg); }
     void debug(string_view_t msg) const noexcept { log(level::debug, msg); }
     void info(string_view_t msg) const noexcept { log(level::info, msg); }
@@ -142,7 +142,7 @@ private:
     mutable memory_buf_t buf_;
     mutable std::tuple<Sinks...> sinks_;
 
-    // string_view path — no formatting needed, just header + raw payload
+    // string_view path - no formatting needed, just header + raw payload
     void log_sv_(level lvl, string_view_t sv) const noexcept {
         const auto now = log_clock::now();  // timestamp before lock for accuracy
         std::lock_guard<Mutex> lock(mutex_);
@@ -162,7 +162,7 @@ private:
         if (should_flush(lvl)) std::apply([](auto&... s) { (s.flush(), ...); }, sinks_);
     }
 
-    // per-Args trampoline — type-erases args, forwards to log_fmt_args_.
+    // per-Args trampoline - type-erases args, forwards to log_fmt_args_.
     template <typename... Args>
     void dispatch_fmt_(level lvl, format_string_t<Args...> fmt_str, Args&&... args) const noexcept {
 #ifdef SPDLITE_USE_STD_FORMAT

@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Header files (for IDE visibility only — not compiled)
+# Header files (for IDE visibility only - not compiled)
 set(SPDLITE_HEADERS
     include/spdlite/common.h
     include/spdlite/formatter.h
@@ -68,7 +68,7 @@ if(SPDLITE_BUILD_BENCH)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../spdlog/CMakeLists.txt")
         add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../spdlog ${CMAKE_BINARY_DIR}/spdlog_build EXCLUDE_FROM_ALL)
         add_executable(vs_spdlog bench/vs_spdlog.cpp)
-        # both header-only — spdlite's fmt (FMT_HEADER_ONLY) and spdlog's inline code share the same symbols cleanly
+        # both header-only - spdlite's fmt (FMT_HEADER_ONLY) and spdlog's inline code share the same symbols cleanly
         target_link_libraries(vs_spdlog PRIVATE spdlite spdlog::spdlog_header_only benchmark::benchmark)
     endif()
 endif()

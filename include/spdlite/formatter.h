@@ -55,7 +55,7 @@ struct simple_formatter {
             rebuild_timestamp(static_cast<std::time_t>(secs.count()));
         }
 
-        // patch millis and level in the cached header — 4 byte writes total
+        // patch millis and level in the cached header - 4 byte writes total
         put3(header_.data() + millis_offset_, static_cast<int>(millis.count()));
         header_[level_offset_] = to_string_view(lvl)[0];
 

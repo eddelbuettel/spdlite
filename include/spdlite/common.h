@@ -71,7 +71,7 @@ public:
             return;
         }
 
-        // stack full — spill to heap
+        // stack full - spill to heap
         spill_to_heap();
         heap_->push_back(c);
     }
@@ -79,20 +79,20 @@ public:
     void append(const char* begin, const char* end) {
         auto n = static_cast<std::size_t>(end - begin);
 
-        // already on heap — append directly
+        // already on heap - append directly
         if (heap_) {
             heap_->append(begin, end);
             return;
         }
 
-        // fits in stack — memcpy
+        // fits in stack - memcpy
         if (size_ + n <= StackSize) {
             std::memcpy(stack_ + size_, begin, n);
             size_ += n;
             return;
         }
 
-        // doesn't fit — move stack content to heap, then append
+        // doesn't fit - move stack content to heap, then append
         spill_to_heap();
         heap_->append(begin, end);
     }
@@ -122,7 +122,7 @@ using memory_buf_t = stack_buf<250>;
 
 #else
 
-// when using fmt, reuse its buffer directly — same stack/heap design, no wrapper needed
+// when using fmt, reuse its buffer directly - same stack/heap design, no wrapper needed
 using memory_buf_t = fmt::basic_memory_buffer<char, 250>;
 
 #endif
@@ -131,7 +131,7 @@ enum class level : std::uint8_t { trace = 0, debug = 1, info = 2, warn = 3, err 
 
 constexpr auto levels_count = static_cast<std::size_t>(level::n_levels);
 
-// fixed single-char tags — the formatter patches one byte directly into the cached header
+// fixed single-char tags - the formatter patches one byte directly into the cached header
 constexpr std::array<std::string_view, levels_count> level_names{"T", "D", "I", "W", "E", "C", "O"};
 static_assert(
     [] {
@@ -143,7 +143,7 @@ static_assert(
 
 [[nodiscard]] constexpr std::string_view to_string_view(level lvl) noexcept { return level_names[static_cast<std::size_t>(lvl)]; }
 
-// non-locking fwrite — the logger already holds its own mutex, so the per-call stdio lock is redundant
+// non-locking fwrite - the logger already holds its own mutex, so the per-call stdio lock is redundant
 inline bool fwrite_bytes(const void *ptr, std::size_t n, std::FILE *fp) {
 #if defined(_WIN32)
     return ::_fwrite_nolock(ptr, 1, n, fp) == n;
@@ -154,7 +154,7 @@ inline bool fwrite_bytes(const void *ptr, std::size_t n, std::FILE *fp) {
 #endif
 }
 
-// lightweight message descriptor passed to sinks — all views, no ownership.
+// lightweight message descriptor passed to sinks - all views, no ownership.
 // `formatted` covers the whole line the logger produced (header + payload + newline).
 // `payload` is the raw user message, no header, no trailing newline.
 struct log_msg {

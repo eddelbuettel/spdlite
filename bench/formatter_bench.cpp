@@ -1,5 +1,5 @@
 //
-// formatter_bench.cpp — benchmark the simple_formatter in isolation
+// formatter_bench.cpp - benchmark the simple_formatter in isolation
 //
 
 #include "benchmark/benchmark.h"
@@ -7,7 +7,7 @@
 
 using namespace spdlite;
 
-// appends: header + payload + \r?\n — mirrors what logger does per call
+// appends: header + payload + \r?\n - mirrors what logger does per call
 static inline void format_line(simple_formatter &fmt, memory_buf_t &dest,
                                log_clock::time_point t, level lvl, string_view_t payload) {
     fmt.format_header(t, lvl, dest);
@@ -60,7 +60,7 @@ static void bench_format_long(benchmark::State &state) {
     }
 }
 
-// Just the timestamp (cached path — same second)
+// Just the timestamp (cached path - same second)
 static void bench_timestamp_cached(benchmark::State &state) {
     simple_formatter fmt("x");
     memory_buf_t buf;

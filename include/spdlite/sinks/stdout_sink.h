@@ -9,7 +9,7 @@
 
 namespace spdlite {
 
-// plain fwrite to stdout/stderr — no colors, no buffering tricks
+// plain fwrite to stdout/stderr - no colors, no buffering tricks
 struct stdout_sink {
     explicit stdout_sink(std::FILE *file = stdout) : file_(file) {}
     void write(const log_msg &msg) { fwrite_bytes(msg.formatted.data(), msg.formatted.size(), file_); }
