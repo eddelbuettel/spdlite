@@ -7,7 +7,7 @@
 
 #include "../common.h"
 
-namespace spdlite::sinks {
+namespace spdlite {
 
 // plain fwrite to stdout/stderr — no colors, no buffering tricks
 struct stdout_sink {
@@ -22,4 +22,4 @@ struct stderr_sink : stdout_sink {
     stderr_sink() : stdout_sink(stderr) {}
 };
 
-}  // namespace spdlite::sinks
+}  // namespace spdlite

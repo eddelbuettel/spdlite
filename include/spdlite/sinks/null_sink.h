@@ -5,7 +5,7 @@
 
 #include "../common.h"
 
-namespace spdlite::sinks {
+namespace spdlite {
 
 // discards all output — useful for benchmarking the format path without I/O
 struct null_sink {
@@ -13,4 +13,4 @@ struct null_sink {
     void flush() {}
 };
 
-}  // namespace spdlite::sinks
+}  // namespace spdlite

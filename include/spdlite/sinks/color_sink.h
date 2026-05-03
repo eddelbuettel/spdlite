@@ -7,7 +7,7 @@
 
 #include "../common.h"
 
-namespace spdlite::sinks {
+namespace spdlite {
 
 // Whether the color sink emits color codes or attributes.
 //   automatic — colors when the destination is a terminal, plain otherwise (default)
@@ -15,7 +15,7 @@ namespace spdlite::sinks {
 //   never     — never emit colors
 enum class color_mode { automatic, always, never };
 
-}  // namespace spdlite::sinks
+}  // namespace spdlite
 
 #ifdef _WIN32
 
@@ -26,7 +26,7 @@ enum class color_mode { automatic, always, never };
 #endif
 #include <windows.h>
 
-namespace spdlite::sinks {
+namespace spdlite {
 
 namespace detail {
 
@@ -131,17 +131,17 @@ private:
 
 }  // namespace detail
 
-struct console : detail::color_sink_base {
-    explicit console(color_mode mode = color_mode::automatic)
+struct console_sink : detail::color_sink_base {
+    explicit console_sink(color_mode mode = color_mode::automatic)
         : color_sink_base(::GetStdHandle(STD_OUTPUT_HANDLE), mode) {}
 };
 
-struct console_err : detail::color_sink_base {
-    explicit console_err(color_mode mode = color_mode::automatic)
+struct console_err_sink : detail::color_sink_base {
+    explicit console_err_sink(color_mode mode = color_mode::automatic)
         : color_sink_base(::GetStdHandle(STD_ERROR_HANDLE), mode) {}
 };
 
-}  // namespace spdlite::sinks
+}  // namespace spdlite
 
 #else
 
@@ -151,7 +151,7 @@ struct console_err : detail::color_sink_base {
 #include <string_view>
 #include <unistd.h>  // for isatty / fileno
 
-namespace spdlite::sinks {
+namespace spdlite {
 
 namespace ansi_color {
 constexpr std::string_view reset = "\033[m";
@@ -233,14 +233,14 @@ private:
 
 }  // namespace detail
 
-struct console : detail::color_sink_base {
-    explicit console(color_mode mode = color_mode::automatic) : color_sink_base(stdout, mode) {}
+struct console_sink : detail::color_sink_base {
+    explicit console_sink(color_mode mode = color_mode::automatic) : color_sink_base(stdout, mode) {}
 };
 
-struct console_err : detail::color_sink_base {
-    explicit console_err(color_mode mode = color_mode::automatic) : color_sink_base(stderr, mode) {}
+struct console_err_sink : detail::color_sink_base {
+    explicit console_err_sink(color_mode mode = color_mode::automatic) : color_sink_base(stderr, mode) {}
 };
 
-}  // namespace spdlite::sinks
+}  // namespace spdlite
 
 #endif

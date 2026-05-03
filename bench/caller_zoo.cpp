@@ -69,7 +69,7 @@ int main() {
     // stdout_sink + level::trace: every call actually formats and writes at
     // runtime, so the compiler cannot prove the bodies dead via the level check.
     // (We don't run this binary for the measurement — only build it.)
-    logger_st<sinks::stdout_sink> log;
+    logger_st<stdout_sink> log;
     log.log_level(level::trace);
 
     // 50 unique 1-arg packs × 6 levels = 300 calls

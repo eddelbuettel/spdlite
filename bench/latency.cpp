@@ -12,7 +12,7 @@
 
 #include "benchmark/benchmark.h"
 #include "spdlite/spdlite.h"
-#include "spdlite/sinks/simple_file_sink.h"
+#include "spdlite/sinks/file_sink.h"
 #include "spdlite/sinks/null_sink.h"
 #include "spdlite/sinks/color_sink.h"
 
@@ -20,7 +20,7 @@ using namespace spdlite;
 
 // Bench with a long C string (no formatting)
 static void bench_null_sink_c_string(benchmark::State& state) {
-    logger_st<sinks::null_sink> log("bench");
+    logger_st<null_sink> log("bench", null_sink{});
     const char* msg =
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum pharetra metus cursus "
         "lacus placerat congue. Nulla egestas, mauris a tincidunt tempus, enim lectus volutpat mi, "
@@ -39,7 +39,7 @@ static void bench_null_sink_c_string(benchmark::State& state) {
 
 // Bench with fmt formatting
 static void bench_null_sink_formatted(benchmark::State& state) {
-    logger_st<sinks::null_sink> log("bench");
+    logger_st<null_sink> log("bench", null_sink{});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -48,7 +48,7 @@ static void bench_null_sink_formatted(benchmark::State& state) {
 
 // Bench with logger disabled at runtime
 static void bench_disabled_runtime(benchmark::State& state) {
-    logger_st<sinks::null_sink> log("bench");
+    logger_st<null_sink> log("bench", null_sink{});
     log.log_level(level::off);
     int i = 0;
     for (auto _ : state) {
@@ -58,7 +58,7 @@ static void bench_disabled_runtime(benchmark::State& state) {
 
 // Bench null_sink_mt with multiple threads
 static void bench_null_sink_mt(benchmark::State& state) {
-    static logger_mt<sinks::null_sink> log("bench");
+    static logger_mt<null_sink> log("bench", null_sink{});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -67,7 +67,7 @@ static void bench_null_sink_mt(benchmark::State& state) {
 
 // Bench color stdout sink (single-threaded)
 static void bench_color_sink_st(benchmark::State& state) {
-    logger_st<sinks::console> log("bench");
+    logger_st<console_sink> log("bench", console_sink{});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -76,7 +76,7 @@ static void bench_color_sink_st(benchmark::State& state) {
 
 // Bench color stdout sink (multi-threaded)
 static void bench_color_sink_mt(benchmark::State& state) {
-    static logger_mt<sinks::console> log("bench");
+    static logger_mt<console_sink> log("bench", console_sink{});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -85,7 +85,7 @@ static void bench_color_sink_mt(benchmark::State& state) {
 
 // Bench basic file sink (single-threaded)
 static void bench_basic_file_st(benchmark::State& state) {
-    logger_st<sinks::simple_file_sink> log("bench", sinks::simple_file_sink{"latency_logs/basic_st.log", true});
+    logger_st<file_sink> log("bench", file_sink{"latency_logs/basic_st.log", true});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -94,7 +94,7 @@ static void bench_basic_file_st(benchmark::State& state) {
 
 // Bench basic file sink (multi-threaded)
 static void bench_basic_file_mt(benchmark::State& state) {
-    static logger_mt<sinks::simple_file_sink> log("bench", sinks::simple_file_sink{"latency_logs/basic_mt.log", true});
+    static logger_mt<file_sink> log("bench", file_sink{"latency_logs/basic_mt.log", true});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);

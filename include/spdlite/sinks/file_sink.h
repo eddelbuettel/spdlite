@@ -11,7 +11,7 @@
 
 #include "../common.h"
 
-namespace spdlite::sinks {
+namespace spdlite {
 
 namespace detail {
 struct file_closer {
@@ -23,8 +23,8 @@ struct file_closer {
 
 // fopen/fwrite with RAII. Creates parent directories automatically.
 // Uses _wfopen on Windows for proper Unicode path support.
-struct simple_file_sink {
-    explicit simple_file_sink(const std::filesystem::path &filename, bool truncate = false) {
+struct file_sink {
+    explicit file_sink(const std::filesystem::path &filename, bool truncate = false) {
         if (auto parent = filename.parent_path(); !parent.empty()) {
             std::filesystem::create_directories(parent);
         }
@@ -46,4 +46,4 @@ private:
     std::unique_ptr<std::FILE, detail::file_closer> file_;
 };
 
-}  // namespace spdlite::sinks
+}  // namespace spdlite

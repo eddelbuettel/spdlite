@@ -10,7 +10,7 @@
 
 // spdlite
 #include "spdlite/spdlite.h"
-#include "spdlite/sinks/simple_file_sink.h"
+#include "spdlite/sinks/file_sink.h"
 #include "spdlite/sinks/null_sink.h"
 #include "spdlite/sinks/color_sink.h"
 
@@ -24,7 +24,7 @@
 // --- disabled at runtime ---
 
 static void spdlite_disabled(benchmark::State& state) {
-    spdlite::logger_st<spdlite::sinks::null_sink> log("bench");
+    spdlite::logger_st<spdlite::null_sink> log("bench", spdlite::null_sink{});
     log.log_level(spdlite::level::off);
     int i = 0;
     for (auto _ : state) {
@@ -45,7 +45,7 @@ static void spdlog_disabled(benchmark::State& state) {
 // --- null sink, formatted (single-threaded) ---
 
 static void spdlite_null_fmt_st(benchmark::State& state) {
-    spdlite::logger_st<spdlite::sinks::null_sink> log("bench");
+    spdlite::logger_st<spdlite::null_sink> log("bench", spdlite::null_sink{});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -71,7 +71,7 @@ static const char* long_msg =
     "nisi turpis ornare nisl, sit amet volutpat neque massa eu odio. Maecenas malesuada quam ex.";
 
 static void spdlite_null_cstr_st(benchmark::State& state) {
-    spdlite::logger_st<spdlite::sinks::null_sink> log("bench");
+    spdlite::logger_st<spdlite::null_sink> log("bench", spdlite::null_sink{});
     for (auto _ : state) {
         log.info(long_msg);
     }
@@ -88,7 +88,7 @@ static void spdlog_null_cstr_st(benchmark::State& state) {
 // --- color stdout (single-threaded) ---
 
 static void spdlite_color_st(benchmark::State& state) {
-    spdlite::logger_st<spdlite::sinks::console> log("bench");
+    spdlite::logger_st<spdlite::console_sink> log("bench", spdlite::console_sink{});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -107,7 +107,7 @@ static void spdlog_color_st(benchmark::State& state) {
 // --- color stdout (multi-threaded) ---
 
 static void spdlite_color_mt(benchmark::State& state) {
-    static spdlite::logger_mt<spdlite::sinks::console> log("bench");
+    static spdlite::logger_mt<spdlite::console_sink> log("bench", spdlite::console_sink{});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -134,8 +134,8 @@ static constexpr const char* null_file = "/dev/null";
 #endif
 
 static void spdlite_file_st(benchmark::State& state) {
-    spdlite::logger_st<spdlite::sinks::simple_file_sink> log("bench",
-                                                            spdlite::sinks::simple_file_sink{null_file, true});
+    spdlite::logger_st<spdlite::file_sink> log("bench",
+                                                            spdlite::file_sink{null_file, true});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -154,8 +154,8 @@ static void spdlog_file_st(benchmark::State& state) {
 // --- basic file sink (multi-threaded) ---
 
 static void spdlite_file_mt(benchmark::State& state) {
-    static spdlite::logger_mt<spdlite::sinks::simple_file_sink> log(
-        "bench", spdlite::sinks::simple_file_sink{null_file, true});
+    static spdlite::logger_mt<spdlite::file_sink> log(
+        "bench", spdlite::file_sink{null_file, true});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);

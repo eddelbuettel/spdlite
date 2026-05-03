@@ -51,15 +51,6 @@ public:
           formatter_(name_),
           sinks_(std::move(sinks)...) {}
 
-    // default-construct sinks (e.g. console)
-    explicit logger(std::string name) requires(sizeof...(Sinks) > 0)
-        : name_(std::move(name)),
-          formatter_(name_) {}
-
-    // nameless logger — output omits [name] field
-    explicit logger(Sinks... sinks) requires(sizeof...(Sinks) > 0)
-        : sinks_(std::move(sinks)...) {}
-
     logger() = default;
 
     // Movable: lets you create a logger in one place and hand it to another
