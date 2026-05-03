@@ -40,9 +40,7 @@ struct null_mutex {
     void unlock() noexcept {}
 };
 
-// Variadic-template logger. Sinks are compile-time parameters - no virtual dispatch.
-// Mutex selects thread safety: std::mutex for multi-threaded, null_mutex for single-threaded.
-// All formatting and sink dispatch happens under a single lock (buf_ is shared state).
+// Logger class. Formats log messages and forwards them to the sinks.
 template <typename Mutex, typename... Sinks>
 class logger {
 public:
@@ -53,13 +51,6 @@ public:
 
     logger() = default;
 
-    // Movable: lets you create a logger in one place and hand it to another
-    // (return-by-value, store in a container, etc.).
-    //
-    // The source is left in a safe but inert state: its level is set to off,
-    // so any subsequent call on the moved-from logger short-circuits via
-    // should_log() and does nothing - no crashes, no spurious output. The
-    // destination keeps the original level.
     logger(logger&& other) noexcept
         : name_(std::move(other.name_)),
           level_(other.level_.load(std::memory_order_relaxed)),
