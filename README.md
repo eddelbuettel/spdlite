@@ -2,9 +2,11 @@
 
 A small, header-only C++20 logger - the lite version of [spdlog](https://github.com/gabime/spdlog), simpler, smaller, fewer features.
 
+Use spdlite if you want a tiny, fast, capable logger.
+
 ## Install
 
-Just copy the `include/spdlite/` folder into to your build tree.
+Just copy the `include/spdlite/` folder into your build tree.
 
 ## Quick start
 ```c++
@@ -13,7 +15,7 @@ Just copy the `include/spdlite/` folder into to your build tree.
 
 int main() {
     using namespace spdlite;
-    logger_st<console_sink> log("app");
+    logger_st<console_sink> log("app", console_sink{});
 
     log.info("Hello {}", "world");
     log.info("Value: {}", 42);
@@ -30,51 +32,7 @@ Output:
 [2026-04-11 10:30:45.123] [app] [E] Failed with code -1
 ```
 
-## Sinks
-
-| Sink | Header | Description |
-|------|--------|-------------|
-| `stdout_sink` | `sinks/stdout_sink.h` | Write to stdout |
-| `stderr_sink` | `sinks/stdout_sink.h` | Write to stderr |
-| `console_sink` | `sinks/color_sink.h` | Colored stdout (Win32 API on Windows, ANSI on Linux/macOS) |
-| `console_err_sink` | `sinks/color_sink.h` | Colored stderr |
-| `file_sink` | `sinks/file_sink.h` | Write to file |
-| `null_sink` | `sinks/null_sink.h` | Discard output |
-
-## Multiple sinks
-```c++
-using namespace spdlite;
-logger_st<console_sink, file_sink> log(
-    "app",
-    console_sink{},
-    file_sink{"logs/app.txt"});
-
-log.info("Color on console, plain text in file");
-```
-
-## Thread safety
-```c++
-// multi-threaded - logger locks once per log call
-logger_mt<file_sink> log("app", file_sink{"app.log"});
-
-// single-threaded - zero locking overhead
-logger_st<stdout_sink> log("app");
-```
-
-## Log levels
-```c++
-log.log_level(level::trace);  // show all messages
-log.log_level(level::warn);   // show only warn, error, critical
-```
-
-Levels: `trace`, `debug`, `info`, `warn`, `err`, `critical`, `off`.
-
-## Flush level
-By default, sinks are only flushed when you call `log.flush()` explicitly. Set a flush level to auto-flush on messages at or above a given severity:
-```c++
-log.flush_level(level::warn);  // auto-flush on warn, error, critical
-log.flush_level(level::off);   // disable auto-flush (default)
-```
+See [`include/spdlite/spdlite.h`](include/spdlite/spdlite.h) for the full API and [`include/spdlite/sinks/`](include/spdlite/sinks/) for the available sinks.
 
 ## fmt vs `std::format`
 
@@ -83,15 +41,6 @@ define `SPDLITE_USE_STD_FORMAT` and the `fmt/` subfolder can be left out:
 
 ```console
 $ cmake -DCMAKE_CXX_FLAGS="-DSPDLITE_USE_STD_FORMAT" ..
-```
-
-## Nameless logger
-```c++
-logger_st<console_sink> log;
-log.info("No name in the output");
-```
-```
-[2026-04-11 10:30:45.123] [I] No name in the output
 ```
 
 ## Benchmarks
