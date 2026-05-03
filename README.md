@@ -4,11 +4,9 @@ A small, header-only C++20 logger — the lite version of [spdlog](https://githu
 
 ## Install
 
-Copy `include/spdlite/` into your project's include path. Done — no CMake,
-no link step, no package manager.
+Just copy the `include/spdlite/` folder into to your build tree.
 
-To skip the bundled fmt and use `<format>` instead, define
-`SPDLITE_USE_STD_FORMAT` (and the `fmt/` subfolder can be left out).
+
 
 
 ## Quick start
