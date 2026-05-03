@@ -34,7 +34,7 @@ using format_string_view_t = fmt::string_view;
 
 using atomic_level_t = std::atomic<level>;
 
-// no-op mutex for logger_st - satisfies BasicLockable, optimized away completely
+// no-op mutex for logger_st
 struct null_mutex {
     void lock() noexcept {}
     void unlock() noexcept {}
