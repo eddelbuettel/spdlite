@@ -12,6 +12,7 @@
 
 #include <array>
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -141,16 +142,12 @@ enum class level : std::uint8_t { trace = 0, debug = 1, info = 2, warn = 3, err 
 constexpr auto levels_count = static_cast<std::size_t>(level::n_levels);
 
 // fixed single-char tags - the formatter patches one byte directly into the cached header
-constexpr std::array<std::string_view, levels_count> level_names{"T", "D", "I", "W", "E", "C", "O"};
-static_assert(
-    [] {
-        for (const auto& name : level_names)
-            if (name.size() != 1) return false;
-        return true;
-    }(),
-    "all level names must be 1 char");
+constexpr std::array<char, levels_count> level_names{'T', 'D', 'I', 'W', 'E', 'C', 'O'};
 
-[[nodiscard]] constexpr std::string_view to_string_view(level lvl) noexcept { return level_names[static_cast<std::size_t>(lvl)]; }
+[[nodiscard]] constexpr char to_char(level lvl) noexcept {
+    assert(static_cast<std::size_t>(lvl) < levels_count);
+    return level_names[static_cast<std::size_t>(lvl)];
+}
 
 // non-locking fwrite - the logger already holds its own mutex, so the per-call stdio lock is redundant
 inline bool fwrite_bytes(const void *ptr, std::size_t n, std::FILE *fp) {

@@ -57,7 +57,7 @@ struct simple_formatter {
 
         // patch millis and level in the cached header - 4 byte writes total
         put3(header_.data() + millis_offset_, static_cast<int>(millis.count()));
-        header_[level_offset_] = to_string_view(lvl)[0];
+        header_[level_offset_] = to_char(lvl);
 
         dest.append(header_.data(), header_.data() + header_.size());
     }
