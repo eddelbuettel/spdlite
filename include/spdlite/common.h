@@ -11,6 +11,7 @@
 #define SPDLITE_VER_PATCH 0
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
@@ -120,11 +121,19 @@ private:
 
 using memory_buf_t = stack_buf<250>;
 
-#else
+template <typename... Args>
+using format_string_t = std::format_string<Args...>;
+using format_args_t = std::format_args;
+using format_string_view_t = std::string_view;
 
+#else
 // when using fmt, reuse its buffer directly - same stack/heap design, no wrapper needed
 using memory_buf_t = fmt::basic_memory_buffer<char, 250>;
 
+template <typename... Args>
+using format_string_t = fmt::format_string<Args...>;
+using format_args_t = fmt::format_args;
+using format_string_view_t = fmt::string_view;
 #endif
 
 enum class level : std::uint8_t { trace = 0, debug = 1, info = 2, warn = 3, err = 4, critical = 5, off = 6, n_levels = 7 };
@@ -173,6 +182,15 @@ struct log_msg {
           log_level(lvl),
           formatted(line),
           payload(raw) {}
+};
+
+// logger-side helpers used by the logger template
+using atomic_level_t = std::atomic<level>;
+
+// no-op mutex for logger_st
+struct null_mutex {
+    void lock() noexcept {}
+    void unlock() noexcept {}
 };
 
 }  // namespace spdlite

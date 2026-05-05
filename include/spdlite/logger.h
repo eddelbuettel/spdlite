@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include <atomic>
 #include <cstdio>
 #include <iterator>
 #include <mutex>
@@ -15,26 +14,6 @@
 #include "formatter.h"
 
 namespace spdlite {
-
-#ifdef SPDLITE_USE_STD_FORMAT
-template <typename... Args>
-using format_string_t = std::format_string<Args...>;
-using format_args_t = std::format_args;
-using format_string_view_t = std::string_view;
-#else
-template <typename... Args>
-using format_string_t = fmt::format_string<Args...>;
-using format_args_t = fmt::format_args;
-using format_string_view_t = fmt::string_view;
-#endif
-
-using atomic_level_t = std::atomic<level>;
-
-// no-op mutex for logger_st
-struct null_mutex {
-    void lock() noexcept {}
-    void unlock() noexcept {}
-};
 
 // Logger class. Formats log messages and forwards them to the sinks.
 template <typename Mutex, typename... Sinks>
