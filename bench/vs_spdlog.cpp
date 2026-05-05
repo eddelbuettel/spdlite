@@ -11,6 +11,7 @@
 // spdlite
 #include "spdlite/logger.h"
 #include "spdlite/sinks/file_sink.h"
+#include "spdlite/sinks/rotating_file_sink.h"
 #include "spdlite/sinks/null_sink.h"
 #include "spdlite/sinks/color_sink.h"
 
@@ -18,8 +19,11 @@
 #include "spdlog/version.h"
 #include "spdlog/logger.h"
 #include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/rotating_file_sink.h"
 #include "spdlog/sinks/null_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
+
+#include <filesystem>
 
 // --- disabled at runtime ---
 
@@ -173,6 +177,72 @@ static void spdlog_file_mt(benchmark::State& state) {
     }
 }
 
+// --- rotating file sink ---
+//
+// max_size large enough that rotations are rare during the bench, so we measure
+// steady-state write cost (the per-iter overhead of rotation tracking) rather
+// than rotation cost itself.
+
+static constexpr std::size_t rot_max_size = 100 * 1024 * 1024;
+static constexpr std::size_t rot_max_files = 3;
+
+static std::filesystem::path rot_dir() {
+    return std::filesystem::temp_directory_path() / "spdlite_vs_spdlog_rot";
+}
+
+static void reset_rot_dir() {
+    std::error_code ec;
+    std::filesystem::remove_all(rot_dir(), ec);
+    std::filesystem::create_directories(rot_dir(), ec);
+}
+
+static void spdlite_rotating_file_st(benchmark::State& state) {
+    reset_rot_dir();
+    spdlite::logger_st<spdlite::rotating_file_sink> log(
+        "bench", spdlite::rotating_file_sink{rot_dir() / "lite.txt", rot_max_size, rot_max_files});
+    int i = 0;
+    for (auto _ : state) {
+        log.info("Hello logger: msg number {}...............", ++i);
+    }
+}
+
+static void spdlog_rotating_file_st(benchmark::State& state) {
+    reset_rot_dir();
+    auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_st>(
+        (rot_dir() / "log.txt").string(), rot_max_size, rot_max_files);
+    spdlog::logger log("bench", sink);
+    int i = 0;
+    for (auto _ : state) {
+        log.info("Hello logger: msg number {}...............", ++i);
+    }
+}
+
+static void spdlite_rotating_file_mt(benchmark::State& state) {
+    static auto& log = [] () -> spdlite::logger_mt<spdlite::rotating_file_sink>& {
+        reset_rot_dir();
+        static spdlite::logger_mt<spdlite::rotating_file_sink> l(
+            "bench", spdlite::rotating_file_sink{rot_dir() / "lite_mt.txt", rot_max_size, rot_max_files});
+        return l;
+    }();
+    int i = 0;
+    for (auto _ : state) {
+        log.info("Hello logger: msg number {}...............", ++i);
+    }
+}
+
+static void spdlog_rotating_file_mt(benchmark::State& state) {
+    static auto log = [] {
+        reset_rot_dir();
+        auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
+            (rot_dir() / "log_mt.txt").string(), rot_max_size, rot_max_files);
+        return spdlog::logger("bench", sink);
+    }();
+    int i = 0;
+    for (auto _ : state) {
+        log.info("Hello logger: msg number {}...............", ++i);
+    }
+}
+
 // --- result collector for comparison table ---
 
 struct result_collector : benchmark::ConsoleReporter {
@@ -258,6 +328,12 @@ int main(int argc, char* argv[]) {
 
     benchmark::RegisterBenchmark("spdlite_file_mt", spdlite_file_mt)->Threads(n_threads)->UseRealTime();
     benchmark::RegisterBenchmark("spdlog_file_mt", spdlog_file_mt)->Threads(n_threads)->UseRealTime();
+
+    benchmark::RegisterBenchmark("spdlite_rotating_file_st", spdlite_rotating_file_st)->UseRealTime();
+    benchmark::RegisterBenchmark("spdlog_rotating_file_st", spdlog_rotating_file_st)->UseRealTime();
+
+    benchmark::RegisterBenchmark("spdlite_rotating_file_mt", spdlite_rotating_file_mt)->Threads(n_threads)->UseRealTime();
+    benchmark::RegisterBenchmark("spdlog_rotating_file_mt", spdlog_rotating_file_mt)->Threads(n_threads)->UseRealTime();
 
     if (full_bench) {
         benchmark::RegisterBenchmark("spdlite_color_st", spdlite_color_st)->UseRealTime();
