@@ -13,14 +13,6 @@
 
 namespace spdlite {
 
-namespace detail {
-struct file_closer {
-    void operator()(std::FILE *f) const {
-        if (f) std::fclose(f);
-    }
-};
-}  // namespace detail
-
 // fopen/fwrite with RAII. Creates parent directories automatically.
 // Uses _wfopen on Windows for proper Unicode path support.
 struct file_sink {

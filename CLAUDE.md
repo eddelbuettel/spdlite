@@ -41,6 +41,7 @@ All code lives under `include/spdlite/` - there is no `.cpp` compilation.
   - `stdout_sink` / `stderr_sink` - plain `fwrite` to stdout/stderr.
   - `console_sink` / `console_err_sink` - inserts color around the level tag. Native Win32 `SetConsoleTextAttribute` on Windows, ANSI escape codes on Linux/macOS.
   - `file_sink` - `fopen`/`fwrite` with RAII via `unique_ptr<FILE>`. Creates parent directories automatically.
+  - `rotating_file_sink` - same as `file_sink` plus a `max_size` cap with N-file rotation (`app.txt` -> `app.1.txt` -> ... -> dropped). `max_files` defaults to 1 (single rotation). Tracks `current_size_` in the sink so the cap check is one int compare on the hot path.
   - `null_sink` - discards output (used in benchmarks).
 - **`fmt/`** - vendored fmt 12.1.0 headers (`base.h`, `format.h`, `format-inl.h`). Do not edit these.
 

@@ -149,6 +149,15 @@ constexpr std::array<char, levels_count> level_names{'T', 'D', 'I', 'W', 'E', 'C
     return level_names[static_cast<std::size_t>(lvl)];
 }
 
+namespace detail {
+// shared FILE* deleter for unique_ptr in file-backed sinks
+struct file_closer {
+    void operator()(std::FILE *f) const noexcept {
+        if (f) std::fclose(f);
+    }
+};
+}  // namespace detail
+
 // non-locking fwrite - the logger already holds its own mutex, so the per-call stdio lock is redundant
 inline bool fwrite_bytes(const void *ptr, std::size_t n, std::FILE *fp) {
 #if defined(_WIN32)

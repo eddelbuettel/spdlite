@@ -110,22 +110,28 @@ private:
 
     // string_view path - no formatting needed, just header + raw payload
     void log_sv_(level lvl, string_view_t sv) const noexcept {
-        const auto now = log_clock::now();  // timestamp before lock for accuracy
-        std::lock_guard<Mutex> lock(mutex_);
-        buf_.clear();
-        formatter_.format_header(now, lvl, buf_);
-        const auto payload_start = buf_.size();
-        buf_.append(sv.data(), sv.data() + sv.size());
-        const auto payload_end = buf_.size();
+        try {
+            const auto now = log_clock::now();  // timestamp before lock for accuracy
+            std::lock_guard<Mutex> lock(mutex_);
+            buf_.clear();
+            formatter_.format_header(now, lvl, buf_);
+            const auto payload_start = buf_.size();
+            buf_.append(sv.data(), sv.data() + sv.size());
+            const auto payload_end = buf_.size();
 #ifdef _WIN32
-        buf_.push_back('\r');
+            buf_.push_back('\r');
 #endif
-        buf_.push_back('\n');
-        string_view_t formatted{buf_.data(), buf_.size()};
-        string_view_t payload{buf_.data() + payload_start, payload_end - payload_start};
-        log_msg msg(now, name_, lvl, formatted, payload);
-        std::apply([&](auto&... s) { (s.write(msg), ...); }, sinks_);
-        if (should_flush(lvl)) std::apply([](auto&... s) { (s.flush(), ...); }, sinks_);
+            buf_.push_back('\n');
+            string_view_t formatted{buf_.data(), buf_.size()};
+            string_view_t payload{buf_.data() + payload_start, payload_end - payload_start};
+            log_msg msg(now, name_, lvl, formatted, payload);
+            std::apply([&](auto&... s) { (s.write(msg), ...); }, sinks_);
+            if (should_flush(lvl)) std::apply([](auto&... s) { (s.flush(), ...); }, sinks_);
+        } catch (const std::exception& ex) {
+            std::fprintf(stderr, "spdlite: log error: %s\n", ex.what());
+        } catch (...) {
+            std::fprintf(stderr, "spdlite: unknown log error\n");
+        }
     }
 
     // per-Args trampoline - type-erases args, forwards to log_fmt_args_.

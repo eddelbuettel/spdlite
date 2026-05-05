@@ -3,18 +3,21 @@
 
 #include "spdlite/sinks/color_sink.h"
 #include "spdlite/sinks/file_sink.h"
+#include "spdlite/sinks/rotating_file_sink.h"
 #include "spdlite/sinks/stdout_sink.h"
 #include "spdlite/logger.h"
 
 void banner();
 void log_levels();
 void file_sink_example();
+void rotating_file_sink_example();
 void multi_sink_example();
 
 int main() {
     banner();
     log_levels();
     file_sink_example();
+    rotating_file_sink_example();
     multi_sink_example();
     return 0;
 }
@@ -54,6 +57,18 @@ void file_sink_example() {
     using namespace spdlite;
     logger_st<file_sink> file_logger("my_logger", file_sink{"logs/example.txt", true});
     file_logger.info("This message is written to logs/example.txt");
+}
+
+// Cap a log file at max_size and keep up to max_files rotated backups.
+// Default max_files=1 gives single rotation: rot.txt + rot.1.txt.
+void rotating_file_sink_example() {
+    using namespace spdlite;
+    constexpr std::size_t max_size = 1024;
+    constexpr std::size_t max_files = 0;
+    logger_st<rotating_file_sink> rot("rot", rotating_file_sink{"logs/rot.txt", max_size, max_files});
+    for (int i = 0; i < 20000; ++i) {
+        rot.info("rotating message #{:03}", i);
+    }
 }
 
 // Compose multiple sinks into one logger - a single log call writes to all of them.
