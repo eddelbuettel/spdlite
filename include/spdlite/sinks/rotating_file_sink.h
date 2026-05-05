@@ -24,8 +24,7 @@ namespace spdlite {
 // rename active -> base.<N>.ext, open fresh active, drop the archive that
 // fell out of the window. One rename + at most one delete per rotation.
 //
-// max_files = 0 keeps no archives (the active file is just truncated each
-// time it would exceed max_size).
+// max_files = 0 disables archives (truncate-only).
 //
 // Example: base="logs/app.txt", max_files=3, after 10 rotations:
 //   logs/app.txt   app.10.txt        app.9.txt   app.8.txt
