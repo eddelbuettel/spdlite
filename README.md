@@ -10,7 +10,7 @@ Just copy the `include/spdlite/` folder into your build tree.
 
 ## Quick start
 ```c++
-#include "spdlite/spdlite.h"
+#include "spdlite/logger.h"
 #include "spdlite/sinks/color_sink.h"
 
 int main() {
@@ -32,7 +32,7 @@ Output:
 [2026-04-11 10:30:45.123] [app] [E] Failed with code -1
 ```
 
-See [`include/spdlite/spdlite.h`](include/spdlite/spdlite.h) for the full API and [`include/spdlite/sinks/`](include/spdlite/sinks/) for the available sinks.
+See [`include/spdlite/logger.h`](include/spdlite/logger.h) for the full API and [`include/spdlite/sinks/`](include/spdlite/sinks/) for the available sinks.
 
 ## fmt vs `std::format`
 

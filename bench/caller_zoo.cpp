@@ -12,7 +12,7 @@
 // Note: fmt-mode only. The Tag<N> formatter specializes fmt::formatter,
 // not std::formatter - building with -DSPDLITE_USE_STD_FORMAT will fail.
 
-#include "spdlite/spdlite.h"
+#include "spdlite/logger.h"
 #include "spdlite/sinks/stdout_sink.h"
 
 #include <cstdint>

@@ -11,7 +11,7 @@
 #include <iostream>
 
 #include "benchmark/benchmark.h"
-#include "spdlite/spdlite.h"
+#include "spdlite/logger.h"
 #include "spdlite/sinks/file_sink.h"
 #include "spdlite/sinks/null_sink.h"
 #include "spdlite/sinks/color_sink.h"

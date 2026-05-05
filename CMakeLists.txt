@@ -13,7 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(SPDLITE_HEADERS
     include/spdlite/common.h
     include/spdlite/formatter.h
-    include/spdlite/spdlite.h
+    include/spdlite/logger.h
     include/spdlite/sinks/file_sink.h
     include/spdlite/sinks/null_sink.h
     include/spdlite/sinks/stdout_sink.h

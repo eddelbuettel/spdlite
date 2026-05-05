@@ -36,7 +36,7 @@ All code lives under `include/spdlite/` - there is no `.cpp` compilation.
 
 - **`common.h`** - minimal shared types (`level` enum, `log_msg`, `stack_buf<N>` used as `memory_buf_t`, `level_names`, `fwrite_bytes`). Sinks include this directly, so they don't pull in the formatter or the logger template.
 - **`formatter.h`** - `simple_formatter` plus `put2`/`put3`/`put4` helpers. Produces `[YYYY-MM-DD HH:MM:SS.mmm] [name] [L] payload\n`. Caches the entire header string and patches only millis (3 bytes) and level (1 byte) per call; timestamp rebuilds only on second-boundary change.
-- **`spdlite.h`** - public include. Pulls in `common.h` + `formatter.h` and adds the `format_string_t`/`format_args_t` aliases, `null_mutex`, `atomic_level_t`, and the `logger<Mutex, Sinks...>` template (with `logger_mt` / `logger_st` aliases). Two internal paths: `log_sv_` (string_view, no formatting) and `log_fmt_args_` (fmt/std::format into payload buffer, fed by per-Args trampoline `dispatch_fmt_`). Both consult `should_flush(lvl)` after dispatch and fold-call `flush()` on every sink when the message level meets the flush threshold (default `level::off` = no auto-flush).
+- **`logger.h`** - public include. Pulls in `common.h` + `formatter.h` and adds the `format_string_t`/`format_args_t` aliases, `null_mutex`, `atomic_level_t`, and the `logger<Mutex, Sinks...>` template (with `logger_mt` / `logger_st` aliases). Two internal paths: `log_sv_` (string_view, no formatting) and `log_fmt_args_` (fmt/std::format into payload buffer, fed by per-Args trampoline `dispatch_fmt_`). Both consult `should_flush(lvl)` after dispatch and fold-call `flush()` on every sink when the message level meets the flush threshold (default `level::off` = no auto-flush).
 - **`sinks/`** - each sink is a simple struct with `write(const log_msg&)` and `flush()`, including only `common.h` from spdlite. The `log_msg` carries metadata plus two views into the logger's shared buffer: `formatted` (the whole line, header + payload + newline) and `payload` (the raw user message, no header, no newline). Sinks typically write `msg.formatted`; structured sinks (JSON, syslog, etc.) can read `msg.payload` directly. No base class - sinks are duck-typed template parameters.
   - `stdout_sink` / `stderr_sink` - plain `fwrite` to stdout/stderr.
   - `console_sink` / `console_err_sink` - inserts color around the level tag. Native Win32 `SetConsoleTextAttribute` on Windows, ANSI escape codes on Linux/macOS.
@@ -44,7 +44,7 @@ All code lives under `include/spdlite/` - there is no `.cpp` compilation.
   - `null_sink` - discards output (used in benchmarks).
 - **`fmt/`** - vendored fmt 12.1.0 headers (`base.h`, `format.h`, `format-inl.h`). Do not edit these.
 
-To drop into another project, copy `include/spdlite/spdlite.h` plus the sinks you need (and `fmt/` unless using `SPDLITE_USE_STD_FORMAT`). No CMake required.
+To drop into another project, copy `include/spdlite/logger.h` plus the sinks you need (and `fmt/` unless using `SPDLITE_USE_STD_FORMAT`). No CMake required.
 
 ## Code style
 

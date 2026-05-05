@@ -4,7 +4,7 @@
 #include "spdlite/sinks/color_sink.h"
 #include "spdlite/sinks/file_sink.h"
 #include "spdlite/sinks/stdout_sink.h"
-#include "spdlite/spdlite.h"
+#include "spdlite/logger.h"
 
 void banner();
 void log_levels();

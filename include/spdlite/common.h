@@ -3,7 +3,7 @@
 
 #pragma once
 
-// Minimal types shared by spdlite.h and the sinks. Designed so a sink header
+// Minimal types shared by logger.h and the sinks. Designed so a sink header
 // can include just this file rather than the whole logger template.
 
 #define SPDLITE_VER_MAJOR 0
