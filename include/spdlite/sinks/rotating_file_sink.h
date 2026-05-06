@@ -41,8 +41,9 @@ struct rotating_file_sink {
             std::filesystem::create_directories(parent);
         }
 
-        // resume the counter from the highest existing archive
-        next_index_ = scan_highest_archive_() + 1;
+        // resume the counter from the highest existing archive, and clean up
+        // any orphans below the [highest - max_files + 1, highest] window
+        next_index_ = scan_and_prune_archives_() + 1;
 
         // pick up existing active size so cross-restart logs are preserved
         std::error_code ec;
@@ -139,21 +140,38 @@ private:
         return false;
     }
 
-    // walk the parent directory and return the highest archive index found,
-    // or 0 if no archives exist (so next_index_ becomes 1 on first rotation).
-    // called only once in construction
-    std::size_t scan_highest_archive_() const {
+    // walk the parent directory; return the highest archive index found, and
+    // delete any archives below the [highest - max_files + 1, highest] window
+    // so the file-count invariant holds even if the chain had holes from an
+    // earlier run (e.g. user-deleted or different max_files settings).
+    // returns 0 if no archives exist (next_index_ becomes 1 on first rotation).
+    // called only once in construction.
+    std::size_t scan_and_prune_archives_() const {
         auto parent = base_filename_.parent_path();
         if (parent.empty()) parent = ".";
         std::error_code ec;
         if (!std::filesystem::exists(parent, ec)) return 0;
         const auto stem = base_filename_.stem().string();
         const auto ext = base_filename_.extension().string();
+
+        // first pass: find the highest index
         std::size_t highest = 0;
         for (const auto &entry : std::filesystem::directory_iterator(parent, ec)) {
             if (ec) break;
             if (auto n = parse_archive_index_(entry.path().filename().string(), stem, ext); n.has_value()) {
                 if (*n > highest) highest = *n;
+            }
+        }
+        if (highest == 0) return 0;  // no archives found, nothing to prune
+
+        // second pass: delete anything below the keep window (best-effort)
+        if (highest > max_files_) {
+            const std::size_t lowest_keep = highest - max_files_ + 1;
+            for (const auto &entry : std::filesystem::directory_iterator(parent, ec)) {
+                if (ec) break;
+                if (auto n = parse_archive_index_(entry.path().filename().string(), stem, ext); n.has_value()) {
+                    if (*n < lowest_keep) std::filesystem::remove(entry.path(), ec);
+                }
             }
         }
         return highest;
