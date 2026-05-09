@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026, Gabi Melman
 
-#include "spdlite/sinks/color_sink.h"
+#include "spdlite/logger.h"
+#include "spdlite/sinks/console_sink.h"
 #include "spdlite/sinks/file_sink.h"
 #include "spdlite/sinks/rotating_file_sink.h"
-#include "spdlite/sinks/stdout_sink.h"
-#include "spdlite/logger.h"
+#include "spdlite/sinks/shared_sink.h"
 
 void banner();
 void log_levels();
 void file_sink_example();
 void rotating_file_sink_example();
 void multi_sink_example();
+void shared_file_sink_example();
 
 int main() {
     banner();
@@ -19,13 +20,14 @@ int main() {
     file_sink_example();
     rotating_file_sink_example();
     multi_sink_example();
+    shared_file_sink_example();
     return 0;
 }
 
 // Print an ASCII banner with the spdlite version through a colored console logger.
 void banner() {
     using namespace spdlite;
-    logger_st<console_sink> console;
+    logger_st console(console_sink{});
     console.info(R"(
                 ____ ___ __
    _________  ____/ / (.) /____
@@ -38,10 +40,10 @@ void banner() {
 }
 
 // Walk all log levels through a colored console logger.
-// By default the threshold is info; enable trace explicitly to see everything.
+// By default, the threshold is info; enable trace explicitly to see everything.
 void log_levels() {
     using namespace spdlite;
-    logger_st console("", console_sink{});
+    logger_st console(console_sink{});
     console.log_level(level::trace);
     console.trace("This is a {} message", "trace");
     console.debug("This is a {} message", "debug");
@@ -55,7 +57,7 @@ void log_levels() {
 // automatically and uses _wfopen on Windows for Unicode paths.
 void file_sink_example() {
     using namespace spdlite;
-    logger_st<file_sink> file_logger("my_logger", file_sink{"logs/example.txt", true});
+    logger_st file_logger("my_logger", file_sink{"logs/example.txt", open_mode::truncate});
     file_logger.info("This message is written to logs/example.txt");
 }
 
@@ -63,10 +65,10 @@ void file_sink_example() {
 // Default max_files=1 gives single rotation: rot.txt + rot.1.txt.
 void rotating_file_sink_example() {
     using namespace spdlite;
-    constexpr std::size_t max_size = 1024;
-    constexpr std::size_t max_files = 0;
-    logger_st<rotating_file_sink> rot("rot", rotating_file_sink{"logs/rot.txt", max_size, max_files});
-    for (int i = 0; i < 20000; ++i) {
+    constexpr std::size_t max_size = 256;
+    constexpr std::size_t max_files = 3;
+    logger_st rot(rotating_file_sink{"logs/rot.txt", max_size, max_files});
+    for (int i = 0; i < 2000; ++i) {
         rot.info("rotating message #{:03}", i);
     }
 }
@@ -74,6 +76,20 @@ void rotating_file_sink_example() {
 // Compose multiple sinks into one logger - a single log call writes to all of them.
 void multi_sink_example() {
     using namespace spdlite;
-    logger_st<console_sink, file_sink> multi("my_logger", console_sink{}, file_sink{"logs/multi.txt", true});
+    logger_st multi("my_logger", console_sink{}, file_sink{"logs/multi.txt", open_mode::truncate});
     multi.info("This goes to both console and file");
+}
+
+// Multiple named loggers writing to one shared file via shared_sink.
+// Each line is tagged with the logger's name, so subsystems can be
+// distinguished by grep on a single output file.
+void shared_file_sink_example() {
+    using namespace spdlite;
+    auto file = std::make_shared<file_sink>("logs/shared.txt", open_mode::truncate);
+    shared_sink wrapped(file);
+    logger_mt network("network", wrapped);
+    logger_mt auth("auth", wrapped);
+
+    network.info("connection established");
+    auth.warn("invalid token");
 }

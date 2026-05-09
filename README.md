@@ -11,7 +11,7 @@ Just copy the `include/spdlite/` folder into your build tree.
 ## Quick start
 ```c++
 #include "spdlite/logger.h"
-#include "spdlite/sinks/color_sink.h"
+#include "spdlite/sinks/console_sink.h"
 
 int main() {
     using namespace spdlite;

@@ -12,9 +12,10 @@
 
 #include "benchmark/benchmark.h"
 #include "spdlite/logger.h"
+#include "spdlite/sinks/console_sink.h"
 #include "spdlite/sinks/file_sink.h"
 #include "spdlite/sinks/null_sink.h"
-#include "spdlite/sinks/color_sink.h"
+#include "spdlite/sinks/shared_sink.h"
 
 using namespace spdlite;
 
@@ -85,7 +86,7 @@ static void bench_color_sink_mt(benchmark::State& state) {
 
 // Bench basic file sink (single-threaded)
 static void bench_basic_file_st(benchmark::State& state) {
-    logger_st<file_sink> log("bench", file_sink{"latency_logs/basic_st.log", true});
+    logger_st<file_sink> log("bench", file_sink{"latency_logs/basic_st.log", open_mode::truncate});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -94,9 +95,26 @@ static void bench_basic_file_st(benchmark::State& state) {
 
 // Bench basic file sink (multi-threaded)
 static void bench_basic_file_mt(benchmark::State& state) {
-    static logger_mt<file_sink> log("bench", file_sink{"latency_logs/basic_mt.log", true});
+    static logger_mt<file_sink> log("bench", file_sink{"latency_logs/basic_mt.log", open_mode::truncate});
     int i = 0;
     for (auto _ : state) {
+        log.info("Hello logger: msg number {}...............", ++i);
+    }
+}
+
+// Bench shared_sink<file_sink> across multiple loggers (multi-threaded).
+// Two independent loggers write through the same underlying file_sink, so
+// every write takes the shared lock in addition to each logger's own mutex.
+// Compare against bench_basic_file_mt to read the cross-logger lock cost.
+static void bench_shared_file_mt(benchmark::State& state) {
+    static auto raw = std::make_shared<file_sink>("latency_logs/shared_mt.log", open_mode::truncate);
+    static shared_sink<file_sink> wrapped(raw);
+    static logger_mt<shared_sink<file_sink>> log_a("bench_a", wrapped);
+    static logger_mt<shared_sink<file_sink>> log_b("bench_b", wrapped);
+    int i = 0;
+    for (auto _ : state) {
+        // alternate loggers to exercise cross-logger contention on the shared lock
+        auto& log = (state.thread_index() & 1) ? log_a : log_b;
         log.info("Hello logger: msg number {}...............", ++i);
     }
 }
@@ -135,6 +153,7 @@ int main(int argc, char* argv[]) {
         benchmark::RegisterBenchmark("color_sink_mt", bench_color_sink_mt)->Threads(n_threads)->UseRealTime();
         benchmark::RegisterBenchmark("basic_file_st", bench_basic_file_st)->UseRealTime();
         benchmark::RegisterBenchmark("basic_file_mt", bench_basic_file_mt)->Threads(n_threads)->UseRealTime();
+        benchmark::RegisterBenchmark("shared_file_mt", bench_shared_file_mt)->Threads(n_threads)->UseRealTime();
     }
 
     benchmark::Initialize(&argc, argv);

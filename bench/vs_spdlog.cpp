@@ -10,20 +10,20 @@
 
 // spdlite
 #include "spdlite/logger.h"
+#include "spdlite/sinks/console_sink.h"
 #include "spdlite/sinks/file_sink.h"
-#include "spdlite/sinks/rotating_file_sink.h"
 #include "spdlite/sinks/null_sink.h"
-#include "spdlite/sinks/color_sink.h"
+#include "spdlite/sinks/rotating_file_sink.h"
 
 // spdlog
-#include "spdlog/version.h"
+#include <filesystem>
+
 #include "spdlog/logger.h"
 #include "spdlog/sinks/basic_file_sink.h"
-#include "spdlog/sinks/rotating_file_sink.h"
 #include "spdlog/sinks/null_sink.h"
+#include "spdlog/sinks/rotating_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
-
-#include <filesystem>
+#include "spdlog/version.h"
 
 // --- disabled at runtime ---
 
@@ -138,8 +138,7 @@ static constexpr const char* null_file = "/dev/null";
 #endif
 
 static void spdlite_file_st(benchmark::State& state) {
-    spdlite::logger_st<spdlite::file_sink> log("bench",
-                                                            spdlite::file_sink{null_file, true});
+    spdlite::logger_st<spdlite::file_sink> log("bench", spdlite::file_sink{null_file, spdlite::open_mode::truncate});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -158,8 +157,7 @@ static void spdlog_file_st(benchmark::State& state) {
 // --- basic file sink (multi-threaded) ---
 
 static void spdlite_file_mt(benchmark::State& state) {
-    static spdlite::logger_mt<spdlite::file_sink> log(
-        "bench", spdlite::file_sink{null_file, true});
+    static spdlite::logger_mt<spdlite::file_sink> log("bench", spdlite::file_sink{null_file, spdlite::open_mode::truncate});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -186,9 +184,7 @@ static void spdlog_file_mt(benchmark::State& state) {
 static constexpr std::size_t rot_max_size = 100 * 1024 * 1024;
 static constexpr std::size_t rot_max_files = 3;
 
-static std::filesystem::path rot_dir() {
-    return std::filesystem::temp_directory_path() / "spdlite_vs_spdlog_rot";
-}
+static std::filesystem::path rot_dir() { return std::filesystem::temp_directory_path() / "spdlite_vs_spdlog_rot"; }
 
 static void reset_rot_dir() {
     std::error_code ec;
@@ -208,8 +204,8 @@ static void spdlite_rotating_file_st(benchmark::State& state) {
 
 static void spdlog_rotating_file_st(benchmark::State& state) {
     reset_rot_dir();
-    auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_st>(
-        (rot_dir() / "log.txt").string(), rot_max_size, rot_max_files);
+    auto sink =
+        std::make_shared<spdlog::sinks::rotating_file_sink_st>((rot_dir() / "log.txt").string(), rot_max_size, rot_max_files);
     spdlog::logger log("bench", sink);
     int i = 0;
     for (auto _ : state) {
@@ -218,7 +214,7 @@ static void spdlog_rotating_file_st(benchmark::State& state) {
 }
 
 static void spdlite_rotating_file_mt(benchmark::State& state) {
-    static auto& log = [] () -> spdlite::logger_mt<spdlite::rotating_file_sink>& {
+    static auto& log = []() -> spdlite::logger_mt<spdlite::rotating_file_sink>& {
         reset_rot_dir();
         static spdlite::logger_mt<spdlite::rotating_file_sink> l(
             "bench", spdlite::rotating_file_sink{rot_dir() / "lite_mt.txt", rot_max_size, rot_max_files});
@@ -233,8 +229,8 @@ static void spdlite_rotating_file_mt(benchmark::State& state) {
 static void spdlog_rotating_file_mt(benchmark::State& state) {
     static auto log = [] {
         reset_rot_dir();
-        auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-            (rot_dir() / "log_mt.txt").string(), rot_max_size, rot_max_files);
+        auto sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>((rot_dir() / "log_mt.txt").string(), rot_max_size,
+                                                                           rot_max_files);
         return spdlog::logger("bench", sink);
     }();
     int i = 0;

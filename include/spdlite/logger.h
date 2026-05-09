@@ -15,6 +15,13 @@
 
 namespace spdlite {
 
+// Sink concept: write(log_msg) + flush().
+template <typename T>
+concept log_sink = requires(T & s, const log_msg& m) {
+    s.write(m);
+    s.flush();
+};
+
 // Logger class. Formats log messages and forwards them to the sinks.
 template <typename Mutex, typename... Sinks>
 class logger {
@@ -22,6 +29,10 @@ public:
     explicit logger(std::string name, Sinks... sinks)
         : name_(std::move(name)),
           formatter_(name_),
+          sinks_(std::move(sinks)...) {}
+
+    explicit logger(Sinks... sinks) requires(sizeof...(Sinks) > 0 && (log_sink<Sinks> && ...))
+        : formatter_(name_),
           sinks_(std::move(sinks)...) {}
 
     logger() = default;
@@ -35,7 +46,7 @@ public:
           sinks_(std::move(other.sinks_)) {
         other.level_.store(level::off, std::memory_order_relaxed);
     }
-   
+
     logger& operator=(logger&&) = delete;
     logger(const logger&) = delete;
     logger& operator=(const logger&) = delete;
@@ -178,10 +189,28 @@ private:
 
 // logger_mt: thread-safe (std::mutex). Serializes format + dispatch per log call.
 template <typename... Sinks>
-using logger_mt = logger<std::mutex, Sinks...>;
+class logger_mt : public logger<std::mutex, Sinks...> {
+    using base = logger<std::mutex, Sinks...>;
+
+public:
+    logger_mt() = default;
+    explicit logger_mt(std::string name, Sinks... sinks)
+        : base(std::move(name), std::move(sinks)...) {}
+    explicit logger_mt(Sinks... sinks) requires(sizeof...(Sinks) > 0 && (log_sink<Sinks> && ...))
+        : base(std::move(sinks)...) {}
+};
 
 // logger_st: single-threaded (null_mutex). Zero locking overhead.
 template <typename... Sinks>
-using logger_st = logger<null_mutex, Sinks...>;
+class logger_st : public logger<null_mutex, Sinks...> {
+    using base = logger<null_mutex, Sinks...>;
+
+public:
+    logger_st() = default;
+    explicit logger_st(std::string name, Sinks... sinks)
+        : base(std::move(name), std::move(sinks)...) {}
+    explicit logger_st(Sinks... sinks) requires(sizeof...(Sinks) > 0 && (log_sink<Sinks> && ...))
+        : base(std::move(sinks)...) {}
+};
 
 }  // namespace spdlite

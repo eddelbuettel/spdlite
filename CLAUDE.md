@@ -53,6 +53,7 @@ All code lives under `include/spdlite/` - there is no `.cpp` compilation.
   - `file_sink` - `fopen`/`fwrite` with RAII via `unique_ptr<FILE>`. Creates parent directories automatically.
   - `rotating_file_sink` - same as `file_sink` plus a `max_size` cap with N-file rotation (`app.txt` -> `app.1.txt` -> ... -> dropped). `max_files` defaults to 1 (single rotation), capped at `rotating_file_sink::max_files_limit` (1000). Tracks `current_size_` in the sink so the cap check is one int compare on the hot path.
   - `null_sink` - discards output (used in benchmarks).
+  - `shared_sink<Sink>` - wraps any sink with `shared_ptr<Sink>` + a shared `std::mutex`, so multiple loggers can write through one underlying instance. Copy the wrapper to give it to additional loggers - both the sink and the lock are shared. The wrapper's lock serializes cross-logger access; each `logger_mt`'s own mutex still serializes within one logger.
 - **`fmt/`** - vendored fmt 12.1.0 headers (`base.h`, `format.h`, `format-inl.h`). Do not edit these.
 
 To drop into another project, copy `include/spdlite/logger.h` plus the sinks you need (and `fmt/` unless using `SPDLITE_USE_STD_FORMAT`). No CMake required.

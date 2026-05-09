@@ -18,7 +18,8 @@ set(SPDLITE_HEADERS
     include/spdlite/sinks/rotating_file_sink.h
     include/spdlite/sinks/null_sink.h
     include/spdlite/sinks/stdout_sink.h
-    include/spdlite/sinks/color_sink.h)
+    include/spdlite/sinks/console_sink.h
+    include/spdlite/sinks/shared_sink.h)
 
 # spdlite is header-only (fmt bundled)
 add_library(spdlite INTERFACE)
