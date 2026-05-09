@@ -7,12 +7,14 @@
 #include <cstddef>
 #include <cstdio>
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <system_error>
 #include <thread>
+#include <utility>
 
 #include "../common.h"
 
@@ -30,14 +32,20 @@ namespace spdlite {
 //   logs/app.txt   app.10.txt        app.9.txt   app.8.txt
 //   (active)       (newest archive)              (oldest kept)
 struct rotating_file_sink {
-    rotating_file_sink(const std::filesystem::path &base_filename, std::size_t max_size, std::size_t max_files = 1)
-        : base_filename_(base_filename),
+    static constexpr std::size_t max_files_limit = 1000;
+
+    rotating_file_sink(std::filesystem::path base_filename, std::size_t max_size, std::size_t max_files = 1)
+        : base_filename_(std::move(base_filename)),
           max_size_(max_size),
           max_files_(max_files) {
         if (max_size == 0) {
             throw std::invalid_argument("rotating_file_sink: max_size must be > 0");
         }
-        if (auto parent = base_filename_.parent_path(); !parent.empty()) {
+        if (max_files > max_files_limit) {
+            throw std::invalid_argument("rotating_file_sink: max_files exceeds max_files_limit (1000)");
+        }
+        const auto parent = base_filename_.parent_path();
+        if (!parent.empty()) {
             std::filesystem::create_directories(parent);
         }
 
@@ -47,7 +55,8 @@ struct rotating_file_sink {
 
         // pick up existing active size so cross-restart logs are preserved
         std::error_code ec;
-        if (auto sz = std::filesystem::file_size(base_filename_, ec); !ec) {
+        const auto sz = std::filesystem::file_size(base_filename_, ec);
+        if (!ec) {
             current_size_ = static_cast<std::size_t>(sz);
         }
 
@@ -69,7 +78,7 @@ struct rotating_file_sink {
         }
     }
 
-    void flush() {
+    void flush() const {
         if (file_) std::fflush(file_.get());
     }
 
@@ -82,6 +91,7 @@ private:
     std::unique_ptr<std::FILE, detail::file_closer> file_;
 
     // archive_path_(5) for "logs/app.txt" -> "logs/app.5.txt".
+    [[nodiscard]]
     std::filesystem::path archive_path_(std::size_t n) const {
         auto stem = base_filename_.stem().string();
         auto ext = base_filename_.extension().string();
@@ -141,26 +151,24 @@ private:
     }
 
     // walk the parent directory; return the highest archive index found, and
-    // delete any archives below the [highest - max_files + 1, highest] window
-    // so the file-count invariant holds even if the chain had holes from an
-    // earlier run (e.g. user-deleted or different max_files settings).
-    // returns 0 if no archives exist (next_index_ becomes 1 on first rotation).
-    // called only once in construction.
+    // delete any files below the [highest - max_files + 1, highest]
+    [[nodiscard]]
     std::size_t scan_and_prune_archives_() const {
         auto parent = base_filename_.parent_path();
         if (parent.empty()) parent = ".";
         std::error_code ec;
         if (!std::filesystem::exists(parent, ec)) return 0;
-        const auto stem = base_filename_.stem().string();
-        const auto ext = base_filename_.extension().string();
+        const auto stem = base_filename_.stem();
+        const auto ext = base_filename_.extension();
 
         // first pass: find the highest index
         std::size_t highest = 0;
         for (const auto &entry : std::filesystem::directory_iterator(parent, ec)) {
             if (ec) break;
-            if (auto n = parse_archive_index_(entry.path().filename().string(), stem, ext); n.has_value()) {
-                if (*n > highest) highest = *n;
-            }
+            std::error_code stat_ec;
+            if (!entry.is_regular_file(stat_ec)) continue;
+            const auto n = parse_archive_index_(entry.path().filename(), stem, ext);
+            if (n && *n > highest) highest = *n;
         }
         if (highest == 0) return 0;  // no archives found, nothing to prune
 
@@ -169,36 +177,44 @@ private:
             const std::size_t lowest_keep = highest - max_files_ + 1;
             for (const auto &entry : std::filesystem::directory_iterator(parent, ec)) {
                 if (ec) break;
-                if (auto n = parse_archive_index_(entry.path().filename().string(), stem, ext); n.has_value()) {
-                    if (*n < lowest_keep) std::filesystem::remove(entry.path(), ec);
-                }
+                std::error_code stat_ec;
+                if (!entry.is_regular_file(stat_ec)) continue;
+                const auto n = parse_archive_index_(entry.path().filename(), stem, ext);
+                if (n && *n < lowest_keep) std::filesystem::remove(entry.path(), ec);
             }
         }
         return highest;
     }
 
-    // does `filename` match `<base_stem>.<digits><base_ext>`? returns the index if so.
-    static std::optional<std::size_t> parse_archive_index_(const std::string &filename,
-                                                           const std::string &base_stem,
-                                                           const std::string &base_ext) {
-        // strip ext
-        if (filename.size() <= base_ext.size()) return std::nullopt;
-        if (!base_ext.empty() && filename.compare(filename.size() - base_ext.size(), base_ext.size(), base_ext) != 0)
-            return std::nullopt;
-        const auto without_ext = filename.substr(0, filename.size() - base_ext.size());
-        // expect: base_stem + "." + digits
-        const auto prefix = base_stem + ".";
-        if (without_ext.size() <= prefix.size()) return std::nullopt;
-        if (without_ext.compare(0, prefix.size(), prefix) != 0) return std::nullopt;
-        const auto digits = without_ext.substr(prefix.size());
-        for (char c : digits) {
+    // matches `<base_stem>.<digits><base_ext>`; returns the index if so.
+    static std::optional<std::size_t> parse_archive_index_(const std::filesystem::path &filepath,
+                                                           const std::filesystem::path &base_stem,
+                                                           const std::filesystem::path &base_ext) {
+        // if base has an extension, file's must match exactly. if base has no extension,
+        // the file's ".<digits>" tail is its only "extension" and is parsed below.
+        if (!base_ext.empty() && filepath.extension() != base_ext) return std::nullopt;
+
+        // "app.5.txt"  -> inner is "app.5";
+        // "app.5" with -> inner is "app.5" too. inner's stem must equal base_stem;
+        // inner's extension is the ".<digits>" tail.
+        const auto &inner = base_ext.empty() ? filepath : filepath.stem();
+        if (inner.stem() != base_stem) return std::nullopt;
+        const auto &dot_digits = inner.extension();        // prvalue path, lifetime-extended
+        const auto &dot_digits_str = dot_digits.native();  // const string_type& — no allocation
+        if (dot_digits_str.size() < 2 || dot_digits_str[0] != '.') return std::nullopt;
+
+        std::size_t value = 0;
+        constexpr auto max_idx = std::numeric_limits<std::size_t>::max();
+        for (std::size_t i = 1; i < dot_digits_str.size(); ++i) {
+            const auto c = dot_digits_str[i];
             if (c < '0' || c > '9') return std::nullopt;
+            const auto digit = static_cast<std::size_t>(c - '0');
+            if (value > (max_idx - digit) / 10) return std::nullopt;  // overflow guard
+            value = value * 10 + digit;
         }
-        try {
-            return std::stoull(digits);
-        } catch (...) {
-            return std::nullopt;
-        }
+        // we never produce <stem>.0<ext>, and SIZE_MAX would overflow next_index_
+        if (value == 0 || value == max_idx) return std::nullopt;
+        return value;
     }
 };
 

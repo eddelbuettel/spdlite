@@ -38,6 +38,8 @@ cmake --build build
 
 No test suite exists yet. Formatting is governed by `.clang-format` (Google base, 4-space indent, 130-col limit) - run `clang-format -i <files>` before committing.
 
+A pre-commit hook in `.githooks/pre-commit` formats staged C/C++ files automatically. Enable it once per clone with `git config core.hooksPath .githooks` (preserves any global `pre-push` via a delegate).
+
 ## Architecture
 
 All code lives under `include/spdlite/` - there is no `.cpp` compilation.
@@ -49,7 +51,7 @@ All code lives under `include/spdlite/` - there is no `.cpp` compilation.
   - `stdout_sink` / `stderr_sink` - plain `fwrite` to stdout/stderr.
   - `console_sink` / `console_err_sink` - inserts color around the level tag. Native Win32 `SetConsoleTextAttribute` on Windows, ANSI escape codes on Linux/macOS.
   - `file_sink` - `fopen`/`fwrite` with RAII via `unique_ptr<FILE>`. Creates parent directories automatically.
-  - `rotating_file_sink` - same as `file_sink` plus a `max_size` cap with N-file rotation (`app.txt` -> `app.1.txt` -> ... -> dropped). `max_files` defaults to 1 (single rotation). Tracks `current_size_` in the sink so the cap check is one int compare on the hot path.
+  - `rotating_file_sink` - same as `file_sink` plus a `max_size` cap with N-file rotation (`app.txt` -> `app.1.txt` -> ... -> dropped). `max_files` defaults to 1 (single rotation), capped at `rotating_file_sink::max_files_limit` (1000). Tracks `current_size_` in the sink so the cap check is one int compare on the hot path.
   - `null_sink` - discards output (used in benchmarks).
 - **`fmt/`** - vendored fmt 12.1.0 headers (`base.h`, `format.h`, `format-inl.h`). Do not edit these.
 
