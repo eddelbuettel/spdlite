@@ -57,7 +57,7 @@ void log_levels() {
 // automatically and uses _wfopen on Windows for Unicode paths.
 void file_sink_example() {
     using namespace spdlite;
-    logger_st file_logger("my_logger", file_sink{"logs/example.txt", open_mode::truncate});
+    logger_st<file_sink> file_logger("my_logger", file_sink{"logs/example.txt", open_mode::truncate});
     file_logger.info("This message is written to logs/example.txt");
 }
 
@@ -76,7 +76,7 @@ void rotating_file_sink_example() {
 // Compose multiple sinks into one logger - a single log call writes to all of them.
 void multi_sink_example() {
     using namespace spdlite;
-    logger_st multi("my_logger", console_sink{}, file_sink{"logs/multi.txt", open_mode::truncate});
+    logger_st<console_sink, file_sink> multi("my_logger", console_sink{}, file_sink{"logs/multi.txt", open_mode::truncate});
     multi.info("This goes to both console and file");
 }
 
@@ -87,8 +87,8 @@ void shared_file_sink_example() {
     using namespace spdlite;
     auto file = std::make_shared<file_sink>("logs/shared.txt", open_mode::truncate);
     shared_sink wrapped(file);
-    logger_mt network("network", wrapped);
-    logger_mt auth("auth", wrapped);
+    logger_mt<shared_sink<file_sink>> network("network", wrapped);
+    logger_mt<shared_sink<file_sink>> auth("auth", wrapped);
 
     network.info("connection established");
     auth.warn("invalid token");

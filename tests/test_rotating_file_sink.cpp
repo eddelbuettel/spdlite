@@ -74,7 +74,7 @@ TEST_CASE("max_files window keeps only the newest N archives") {
         if (entry.path().filename() == "app.txt") continue;
         ++archive_count;
         const auto dot_n = entry.path().stem().extension().string();  // ".N"
-        if (dot_n.size() > 1) highest = std::max(highest, std::stoul(dot_n.substr(1)));
+        if (dot_n.size() > 1) highest = std::max<std::size_t>(highest, std::stoul(dot_n.substr(1)));
     }
     CHECK(archive_count == 2);
     CHECK(fs::exists(td / ("app." + std::to_string(highest) + ".txt")));
