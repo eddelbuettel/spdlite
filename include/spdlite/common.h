@@ -141,10 +141,12 @@ enum class level : std::uint8_t { trace = 0, debug = 1, info = 2, warn = 3, err 
 
 constexpr auto levels_count = static_cast<std::size_t>(level::n_levels);
 
-// fixed single-char tags - the formatter patches one byte directly into the cached header
-constexpr std::array<char, levels_count> level_names{'T', 'D', 'I', 'W', 'E', 'C', 'O'};
+// fixed-width 3-char tags - every level prints to exactly level_width bytes so
+// the formatter can patch a fixed-size slot in its cached header.
+constexpr std::size_t level_width = 3;
+constexpr std::array<std::string_view, levels_count> level_names{"TRC", "DBG", "INF", "WRN", "ERR", "CRT", "OFF"};
 
-[[nodiscard]] constexpr char to_char(level lvl) noexcept {
+[[nodiscard]] constexpr std::string_view to_string_view(level lvl) noexcept {
     assert(static_cast<std::size_t>(lvl) < levels_count);
     return level_names[static_cast<std::size_t>(lvl)];
 }
@@ -152,14 +154,14 @@ constexpr std::array<char, levels_count> level_names{'T', 'D', 'I', 'W', 'E', 'C
 namespace detail {
 // shared FILE* deleter for unique_ptr in file-backed sinks
 struct file_closer {
-    void operator()(std::FILE *f) const noexcept {
+    void operator()(std::FILE* f) const noexcept {
         if (f) std::fclose(f);
     }
 };
 }  // namespace detail
 
 // non-locking fwrite - the logger already holds its own mutex, so the per-call stdio lock is redundant
-inline bool fwrite_bytes(const void *ptr, std::size_t n, std::FILE *fp) {
+inline bool fwrite_bytes(const void* ptr, std::size_t n, std::FILE* fp) {
 #if defined(_WIN32)
     return ::_fwrite_nolock(ptr, 1, n, fp) == n;
 #elif defined(__linux__)
@@ -181,8 +183,7 @@ struct log_msg {
 
     log_msg() = default;
 
-    log_msg(log_clock::time_point log_time, string_view_t name, level lvl,
-            string_view_t line, string_view_t raw)
+    log_msg(log_clock::time_point log_time, string_view_t name, level lvl, string_view_t line, string_view_t raw)
         : time(log_time),
           logger_name(name),
           log_level(lvl),

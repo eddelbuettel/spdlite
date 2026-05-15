@@ -131,14 +131,14 @@ static void spdlog_color_mt(benchmark::State& state) {
 
 // --- basic file sink (single-threaded) ---
 
-#ifdef _WIN32
-static constexpr const char* null_file = "NUL";
-#else
-static constexpr const char* null_file = "/dev/null";
-#endif
+// All file-touching benches write under bench_dir() so heavy runs don't hit the SSD
+// when /tmp is tmpfs. Rotating-sink benches can't use /dev/null (need real rename),
+// and using one root keeps the layout uniform across both spdlite and spdlog.
+static std::filesystem::path bench_dir() { return std::filesystem::temp_directory_path() / "spdlite_bench"; }
 
 static void spdlite_file_st(benchmark::State& state) {
-    spdlite::logger_st<spdlite::file_sink> log("bench", spdlite::file_sink{null_file, spdlite::open_mode::truncate});
+    spdlite::logger_st<spdlite::file_sink> log("bench",
+                                               spdlite::file_sink{bench_dir() / "vs_basic_st.log", spdlite::open_mode::truncate});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -146,7 +146,7 @@ static void spdlite_file_st(benchmark::State& state) {
 }
 
 static void spdlog_file_st(benchmark::State& state) {
-    auto sink = std::make_shared<spdlog::sinks::basic_file_sink_st>(null_file, true);
+    auto sink = std::make_shared<spdlog::sinks::basic_file_sink_st>((bench_dir() / "vs_basic_st_spdlog.log").string(), true);
     spdlog::logger log("bench", sink);
     int i = 0;
     for (auto _ : state) {
@@ -157,7 +157,8 @@ static void spdlog_file_st(benchmark::State& state) {
 // --- basic file sink (multi-threaded) ---
 
 static void spdlite_file_mt(benchmark::State& state) {
-    static spdlite::logger_mt<spdlite::file_sink> log("bench", spdlite::file_sink{null_file, spdlite::open_mode::truncate});
+    static spdlite::logger_mt<spdlite::file_sink> log(
+        "bench", spdlite::file_sink{bench_dir() / "vs_basic_mt.log", spdlite::open_mode::truncate});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -166,7 +167,7 @@ static void spdlite_file_mt(benchmark::State& state) {
 
 static void spdlog_file_mt(benchmark::State& state) {
     static auto log = [] {
-        auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(null_file, true);
+        auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>((bench_dir() / "vs_basic_mt_spdlog.log").string(), true);
         return spdlog::logger("bench", sink);
     }();
     int i = 0;
@@ -184,7 +185,9 @@ static void spdlog_file_mt(benchmark::State& state) {
 static constexpr std::size_t rot_max_size = 100 * 1024 * 1024;
 static constexpr std::size_t rot_max_files = 3;
 
-static std::filesystem::path rot_dir() { return std::filesystem::temp_directory_path() / "spdlite_vs_spdlog_rot"; }
+// rotation benches share their own subdir under bench_dir() so we can wipe just
+// the rotation artifacts between runs without disturbing the basic file logs.
+static std::filesystem::path rot_dir() { return bench_dir() / "rot"; }
 
 static void reset_rot_dir() {
     std::error_code ec;

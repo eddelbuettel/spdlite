@@ -8,6 +8,7 @@
 //
 
 #include <cstdio>
+#include <filesystem>
 #include <iostream>
 
 #include "benchmark/benchmark.h"
@@ -18,6 +19,10 @@
 #include "spdlite/sinks/shared_sink.h"
 
 using namespace spdlite;
+
+// Output dir for file-touching benches. On Linux, /tmp is typically tmpfs so
+// these writes don't hit the SSD on heavy runs.
+static std::filesystem::path bench_dir() { return std::filesystem::temp_directory_path() / "spdlite_bench"; }
 
 // Bench with a long C string (no formatting)
 static void bench_null_sink_c_string(benchmark::State& state) {
@@ -86,7 +91,7 @@ static void bench_color_sink_mt(benchmark::State& state) {
 
 // Bench basic file sink (single-threaded)
 static void bench_basic_file_st(benchmark::State& state) {
-    logger_st<file_sink> log("bench", file_sink{"latency_logs/basic_st.log", open_mode::truncate});
+    logger_st<file_sink> log("bench", file_sink{bench_dir() / "basic_st.log", open_mode::truncate});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -95,7 +100,7 @@ static void bench_basic_file_st(benchmark::State& state) {
 
 // Bench basic file sink (multi-threaded)
 static void bench_basic_file_mt(benchmark::State& state) {
-    static logger_mt<file_sink> log("bench", file_sink{"latency_logs/basic_mt.log", open_mode::truncate});
+    static logger_mt<file_sink> log("bench", file_sink{bench_dir() / "basic_mt.log", open_mode::truncate});
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
@@ -107,7 +112,7 @@ static void bench_basic_file_mt(benchmark::State& state) {
 // every write takes the shared lock in addition to each logger's own mutex.
 // Compare against bench_basic_file_mt to read the cross-logger lock cost.
 static void bench_shared_file_mt(benchmark::State& state) {
-    static auto raw = std::make_shared<file_sink>("latency_logs/shared_mt.log", open_mode::truncate);
+    static auto raw = std::make_shared<file_sink>(bench_dir() / "shared_mt.log", open_mode::truncate);
     static shared_sink<file_sink> wrapped(raw);
     static logger_mt<shared_sink<file_sink>> log_a("bench_a", wrapped);
     static logger_mt<shared_sink<file_sink>> log_b("bench_b", wrapped);

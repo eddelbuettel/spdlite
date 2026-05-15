@@ -33,7 +33,7 @@ inline void put4(char* dst, int n) {
 // When name is empty: [YYYY-MM-DD HH:MM:SS.mmm] [L] payload\n
 //
 // Caches the entire header as a single string.
-// Per-call: patch 3 millis bytes + 1 level byte, one memcpy for header, append payload + '\n'.
+// Per-call: patch 3 millis bytes + 3 level bytes, one memcpy for header, append payload + '\n'.
 struct simple_formatter {
     explicit simple_formatter(string_view_t logger_name = {}) { rebuild_header(logger_name); }
 
@@ -55,9 +55,9 @@ struct simple_formatter {
             rebuild_timestamp(static_cast<std::time_t>(secs.count()));
         }
 
-        // patch millis and level in the cached header - 4 byte writes total
+        // patch millis (3 bytes) and level (level_width bytes) in the cached header
         put3(header_.data() + millis_offset_, static_cast<int>(millis.count()));
-        header_[level_offset_] = to_char(lvl);
+        std::memcpy(header_.data() + level_offset_, to_string_view(lvl).data(), level_width);
 
         dest.append(header_.data(), header_.data() + header_.size());
     }
@@ -82,8 +82,8 @@ private:
         }
         header_.push_back('[');
         level_offset_ = header_.size();
-        header_.append("I] ");  // placeholder level (1 char)
-        last_secs_ = {};        // force timestamp rebuild on next format
+        header_.append("INF] ");  // placeholder level (level_width chars + "] ")
+        last_secs_ = {};          // force timestamp rebuild on next format
     }
 
     void rebuild_timestamp(std::time_t time_t_val) {

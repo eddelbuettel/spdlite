@@ -61,5 +61,5 @@ To drop into another project, copy `include/spdlite/logger.h` plus the sinks you
 ## Code style
 
 - Comments inside function bodies start lowercase; comments before declarations can start uppercase.
-- Level names are fixed 1-char tags: T, D, I, W, E, C, O.
+- Level names are fixed 3-char tags: TRC, DBG, INF, WRN, ERR, CRT, OFF.
 - Single namespace: `spdlite`. Sinks are types like `console_sink`, `file_sink`, `null_sink` directly in `spdlite::`.

@@ -9,6 +9,15 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Generate compile_commands.json so clangd / clang-tidy / IDEs see the same flags CMake uses.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# ---- Build options ----
+option(SPDLITE_BUILD_EXAMPLE    "Build spdlite example"                  ON)
+option(SPDLITE_BUILD_TESTS      "Build spdlite unit tests (doctest)"     OFF)
+option(SPDLITE_BUILD_BENCH      "Build spdlite benchmarks"               OFF)
+option(SPDLITE_BUILD_CALLER_ZOO "Build caller_zoo stress executable"     OFF)
+
 # Header files (for IDE visibility only - not compiled)
 set(SPDLITE_HEADERS
     include/spdlite/common.h
@@ -32,7 +41,6 @@ if(MSVC)
 endif()
 
 # Example
-option(SPDLITE_BUILD_EXAMPLE "Build spdlite example" ON)
 if(SPDLITE_BUILD_EXAMPLE)
     add_executable(example example/example.cpp ${SPDLITE_HEADERS})
     source_group("Header Files\\spdlite" FILES ${SPDLITE_HEADERS})
@@ -40,14 +48,12 @@ if(SPDLITE_BUILD_EXAMPLE)
 endif()
 
 # Caller-zoo: synthetic stress for measuring per-callsite cost (binary size, compile time).
-option(SPDLITE_BUILD_CALLER_ZOO "Build caller_zoo stress executable" OFF)
 if(SPDLITE_BUILD_CALLER_ZOO)
     add_executable(caller_zoo bench/caller_zoo.cpp)
     target_link_libraries(caller_zoo PRIVATE spdlite)
 endif()
 
 # Benchmarks
-option(SPDLITE_BUILD_BENCH "Build spdlite benchmarks" OFF)
 if(SPDLITE_BUILD_BENCH)
     find_package(benchmark CONFIG)
     if(NOT benchmark_FOUND)
@@ -73,4 +79,10 @@ if(SPDLITE_BUILD_BENCH)
         # both header-only - spdlite's fmt (FMT_HEADER_ONLY) and spdlog's inline code share the same symbols cleanly
         target_link_libraries(vs_spdlog PRIVATE spdlite spdlog::spdlog_header_only benchmark::benchmark)
     endif()
+endif()
+
+# Tests (doctest, fetched via FetchContent)
+if(SPDLITE_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 endif()

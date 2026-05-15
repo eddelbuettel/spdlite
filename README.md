@@ -26,10 +26,10 @@ int main() {
 
 Output:
 ```
-[2026-04-11 10:30:45.123] [app] [I] Hello world
-[2026-04-11 10:30:45.123] [app] [I] Value: 42
-[2026-04-11 10:30:45.123] [app] [W] Something happened
-[2026-04-11 10:30:45.123] [app] [E] Failed with code -1
+[2026-04-11 10:30:45.123] [app] [INF] Hello world
+[2026-04-11 10:30:45.123] [app] [INF] Value: 42
+[2026-04-11 10:30:45.123] [app] [WRN] Something happened
+[2026-04-11 10:30:45.123] [app] [ERR] Failed with code -1
 ```
 
 See [`include/spdlite/logger.h`](include/spdlite/logger.h) for the full API and [`include/spdlite/sinks/`](include/spdlite/sinks/) for the available sinks.

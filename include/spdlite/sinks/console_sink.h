@@ -91,15 +91,14 @@ struct color_sink_base {
             return;
         }
 
-        constexpr std::size_t level_size = 1;
-        auto level_start = msg.logger_name.empty() ? 27 : 27 + msg.logger_name.size() + 3;
-        auto level_end = level_start + level_size;
+        const auto level_start = msg.logger_name.empty() ? 27 : 27 + msg.logger_name.size() + 3;
+        const auto level_end = level_start + level_width;
 
         // before level tag
         write_console_(data, level_start);
         // colored level tag
         ::SetConsoleTextAttribute(handle_, colors_[static_cast<std::size_t>(msg.log_level)]);
-        write_console_(data + level_start, level_size);
+        write_console_(data + level_start, level_width);
         // reset and remainder
         ::SetConsoleTextAttribute(handle_, orig_attribs_);
         write_console_(data + level_end, size - level_end);
@@ -176,7 +175,7 @@ constexpr std::string_view bold_on_red = "\033[1m\033[41m";
 
 namespace detail {
 
-// wraps ANSI escape codes around the 1-char level tag in the formatted output.
+// wraps ANSI escape codes around the level tag (level_width chars) in the formatted output.
 // rebuilds the line into cbuf_ with: [prefix][color][LVL][reset][rest].
 struct color_sink_base {
     explicit color_sink_base(std::FILE *file, color_mode mode = color_mode::automatic)
@@ -209,9 +208,8 @@ struct color_sink_base {
         }
 
         auto color = colors_[static_cast<std::size_t>(msg.log_level)];
-        constexpr std::size_t level_size = 1;
-        auto level_start = msg.logger_name.empty() ? 27 : 27 + msg.logger_name.size() + 3;
-        auto level_end = level_start + level_size;
+        const auto level_start = msg.logger_name.empty() ? 27 : 27 + msg.logger_name.size() + 3;
+        const auto level_end = level_start + level_width;
 
         cbuf_.clear();
         cbuf_.append(data, data + level_start);
