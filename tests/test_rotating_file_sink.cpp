@@ -8,9 +8,9 @@
 #include <stdexcept>
 #include <string>
 
+#include "helpers.h"
 #include "spdlite/logger.h"
 #include "spdlite/sinks/rotating_file_sink.h"
-#include "support/tmpdir.h"
 
 using namespace spdlite;
 namespace fs = std::filesystem;
@@ -22,19 +22,19 @@ static void touch(const fs::path& p, std::string_view content = "x") {
 }
 
 TEST_CASE("max_size=0 throws") {
-    spdlite_test::tmpdir td{"rot_zero"};
+    helpers::tmpdir td{"rot_zero"};
     CHECK_THROWS_AS(rotating_file_sink(td / "x.txt", 0, 1), std::invalid_argument);
 }
 
 TEST_CASE("max_files greater than max_files_limit throws") {
-    spdlite_test::tmpdir td{"rot_limit"};
+    helpers::tmpdir td{"rot_limit"};
     CHECK_THROWS_AS(rotating_file_sink(td / "x.txt", 1024, rotating_file_sink::max_files_limit + 1), std::invalid_argument);
 }
 
 TEST_CASE("max_files_limit constant matches documented value") { CHECK(rotating_file_sink::max_files_limit == 1000); }
 
 TEST_CASE("rotating_file_sink creates the active file") {
-    spdlite_test::tmpdir td{"rot_create"};
+    helpers::tmpdir td{"rot_create"};
     const auto path = td / "app.txt";
     {
         rotating_file_sink sink{path, 1024, 3};
@@ -43,7 +43,7 @@ TEST_CASE("rotating_file_sink creates the active file") {
 }
 
 TEST_CASE("rotation produces an archive once max_size is exceeded") {
-    spdlite_test::tmpdir td{"rot_basic"};
+    helpers::tmpdir td{"rot_basic"};
     const auto path = td / "app.txt";
     {
         // 4 ~55-byte log lines exceed the 128-byte cap on the 3rd write, producing exactly one
@@ -57,7 +57,7 @@ TEST_CASE("rotation produces an archive once max_size is exceeded") {
 }
 
 TEST_CASE("max_files window keeps only the newest N archives") {
-    spdlite_test::tmpdir td{"rot_window"};
+    helpers::tmpdir td{"rot_window"};
     const auto path = td / "app.txt";
     {
         // many rotations under a window of 2; only the two newest archives should survive
@@ -82,7 +82,7 @@ TEST_CASE("max_files window keeps only the newest N archives") {
 }
 
 TEST_CASE("scan_and_prune drops archives below the keep window on construction") {
-    spdlite_test::tmpdir td{"rot_prune"};
+    helpers::tmpdir td{"rot_prune"};
     const auto path = td / "app.txt";
 
     // pre-populate stale archives
@@ -105,7 +105,7 @@ TEST_CASE("scan_and_prune drops archives below the keep window on construction")
 }
 
 TEST_CASE("counter resumes across restarts") {
-    spdlite_test::tmpdir td{"rot_resume"};
+    helpers::tmpdir td{"rot_resume"};
     const auto path = td / "app.txt";
 
     // pre-populate as if a previous run rotated to .5

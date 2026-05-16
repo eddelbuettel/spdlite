@@ -9,11 +9,11 @@
 #include <thread>
 #include <vector>
 
+#include "helpers.h"
 #include "spdlite/logger.h"
-#include "support/capture_sink.h"
 
 using namespace spdlite;
-using spdlite_test::capture_sink;
+using helpers::capture_sink;
 
 TEST_CASE("logger_mt: N threads x M messages all reach the sink, no torn lines") {
     constexpr int n_threads = 8;

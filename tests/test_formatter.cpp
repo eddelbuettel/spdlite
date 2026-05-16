@@ -6,10 +6,12 @@
 #include <string>
 #include <string_view>
 
+#include "helpers.h"
 #include "spdlite/formatter.h"
 
 using namespace spdlite;
 using namespace std::chrono;
+using helpers::contains;
 
 TEST_CASE("put2 writes a zero-padded 2-digit number") {
     char buf[2];
@@ -66,8 +68,8 @@ TEST_CASE("format_header produces a fixed-shape header with logger name") {
     CHECK(out[20] == '.');
     CHECK(out[24] == ']');
     CHECK(out[25] == ' ');
-    CHECK(out.find("[myname]") != std::string::npos);
-    CHECK(out.find("[INF] ") != std::string::npos);
+    CHECK(contains(out, "[myname]"));
+    CHECK(contains(out, "[INF] "));
     CHECK(out.back() == ' ');  // header always ends with " " (payload appended after)
 }
 
@@ -104,12 +106,12 @@ TEST_CASE("level_offset points at the level character (used by color sinks)") {
 TEST_CASE("set_logger_name updates the header") {
     simple_formatter fmt{"old"};
     auto out1 = format_one(fmt, log_clock::now(), level::info);
-    CHECK(out1.find("[old]") != std::string::npos);
+    CHECK(contains(out1, "[old]"));
 
     fmt.set_logger_name("new");
     auto out2 = format_one(fmt, log_clock::now(), level::info);
-    CHECK(out2.find("[old]") == std::string::npos);
-    CHECK(out2.find("[new]") != std::string::npos);
+    CHECK(!contains(out2, "[old]"));
+    CHECK(contains(out2, "[new]"));
 }
 
 TEST_CASE("format_header patches only the millis when within the same second") {
@@ -122,10 +124,16 @@ TEST_CASE("format_header patches only the millis when within the same second") {
     auto b = format_one(fmt, base + milliseconds{123}, level::info);
     auto c = format_one(fmt, base + milliseconds{999}, level::info);
 
+    CHECK(a.substr(1, 19) == b.substr(1, 19));
+    CHECK(a.substr(1, 19) == c.substr(1, 19));
+
     CHECK(a.substr(21, 3) == "000");
     CHECK(b.substr(21, 3) == "123");
     CHECK(c.substr(21, 3) == "999");
 
-    CHECK(a.substr(1, 19) == b.substr(1, 19));
-    CHECK(a.substr(1, 19) == c.substr(1, 19));
+    auto d = format_one(fmt, base + milliseconds{1000}, level::info);
+    auto e = format_one(fmt, base + milliseconds{1027}, level::info);
+    CHECK(d.substr(1, 19) == e.substr(1, 19));
+    CHECK(d.substr(21, 3) == "000");
+    CHECK(e.substr(21, 3) == "027");
 }

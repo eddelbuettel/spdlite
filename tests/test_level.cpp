@@ -2,9 +2,9 @@
 
 #include <doctest/doctest.h>
 
+#include "helpers.h"
 #include "spdlite/logger.h"
 #include "spdlite/sinks/null_sink.h"
-#include "support/capture_sink.h"
 
 using spdlite::level;
 
@@ -50,8 +50,8 @@ TEST_CASE("should_log filters by current log_level") {
 }
 
 TEST_CASE("level filtering suppresses messages at the sink") {
-    spdlite_test::capture_sink cap;
-    spdlite::logger_st<spdlite_test::capture_sink> log{"f", cap};
+    helpers::capture_sink cap;
+    spdlite::logger_st<helpers::capture_sink> log{"f", cap};
     log.log_level(level::warn);
 
     log.trace("nope");

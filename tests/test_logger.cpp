@@ -4,12 +4,13 @@
 
 #include <string>
 
+#include "helpers.h"
 #include "spdlite/logger.h"
 #include "spdlite/sinks/null_sink.h"
-#include "support/capture_sink.h"
 
 using namespace spdlite;
-using spdlite_test::capture_sink;
+using helpers::capture_sink;
+using helpers::contains;
 
 TEST_CASE("named ctor sets the logger name and embeds it in the header") {
     capture_sink cap;
@@ -18,7 +19,7 @@ TEST_CASE("named ctor sets the logger name and embeds it in the header") {
     CHECK(log.name() == "my_logger");
     log.info("hello");
     REQUIRE(cap.state->formatted.size() == 1);
-    CHECK(cap.state->formatted[0].find("[my_logger]") != std::string::npos);
+    CHECK(contains(cap.state->formatted[0], "[my_logger]"));
 }
 
 TEST_CASE("sinks-only ctor produces an empty name and no name bracket in the header") {
@@ -29,7 +30,7 @@ TEST_CASE("sinks-only ctor produces an empty name and no name bracket in the hea
     log.info("hello");
     REQUIRE(cap.state->formatted.size() == 1);
     // header shape with no name: "[ts] [INF] hello\n" - level tag butts up against payload
-    CHECK(cap.state->formatted[0].find("[INF] hello") != std::string::npos);
+    CHECK(contains(cap.state->formatted[0], "[INF] hello"));
 }
 
 TEST_CASE("log_level get/set round trips") {
@@ -144,7 +145,7 @@ TEST_CASE("formatted line contains the rendered payload after the header") {
     log.info("value={}", 42);
     REQUIRE(cap.state->formatted.size() == 1);
     const auto& line = cap.state->formatted[0];
-    CHECK(line.find("[name]") != std::string::npos);
-    CHECK(line.find("[INF]") != std::string::npos);
-    CHECK(line.find("value=42") != std::string::npos);
+    CHECK(contains(line, "[name]"));
+    CHECK(contains(line, "[INF]"));
+    CHECK(contains(line, "value=42"));
 }

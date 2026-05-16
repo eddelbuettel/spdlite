@@ -4,12 +4,13 @@
 
 #include <memory>
 
+#include "helpers.h"
 #include "spdlite/logger.h"
 #include "spdlite/sinks/shared_sink.h"
-#include "support/capture_sink.h"
 
 using namespace spdlite;
-using spdlite_test::capture_sink;
+using helpers::capture_sink;
+using helpers::contains;
 
 TEST_CASE("shared_sink forwards writes to the underlying sink") {
     auto inner = std::make_shared<capture_sink>();
@@ -41,8 +42,8 @@ TEST_CASE("two loggers can share one underlying sink") {
     CHECK(inner->state->payloads[2] == "from-a-2");
 
     // both loggers' headers reach the same sink
-    CHECK(inner->state->formatted[0].find("[a]") != std::string::npos);
-    CHECK(inner->state->formatted[1].find("[b]") != std::string::npos);
+    CHECK(contains(inner->state->formatted[0], "[a]"));
+    CHECK(contains(inner->state->formatted[1], "[b]"));
 }
 
 TEST_CASE("shared_sink copy shares the same underlying sink") {
