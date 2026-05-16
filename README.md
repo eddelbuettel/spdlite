@@ -43,30 +43,63 @@ define `SPDLITE_USE_STD_FORMAT` and the `fmt/` subfolder can be left out:
 $ cmake -DCMAKE_CXX_FLAGS="-DSPDLITE_USE_STD_FORMAT" ..
 ```
 
+## Formatter options
+
+The default header is `[YYYY-MM-DD HH:MM:SS.mmm] [name] [L] payload`. Reconfigure
+it at runtime via `format_options` - the cached header is rebuilt once and the
+hot path remains "patch a few bytes + memcpy":
+
+```c++
+logger_st log("app", console_sink{});
+log.info("default header");
+
+log.format_options({.utc = true});
+log.info("UTC timestamp");
+
+log.format_options({.show_date = false});
+log.info("no date prefix");
+
+log.format_options({.precision = time_precision::ns});
+log.info("nanosecond fractional digits");
+
+log.format_options({.precision = time_precision::none});
+log.info("no fractional digits");
+
+log.format_options({.show_thread_id = true});
+log.info("thread id in header");
+
+log.format_options({.show_date = false, .precision = time_precision::none});
+log.info("compact time-only header");
+```
+
+Output:
+```
+[2026-04-11 10:30:45.123] [app] [INF] default header
+[2026-04-11 07:30:45.123] [app] [INF] UTC timestamp
+[10:30:45.123] [app] [INF] no date prefix
+[2026-04-11 10:30:45.123456789] [app] [INF] nanosecond fractional digits
+[2026-04-11 10:30:45] [app] [INF] no fractional digits
+[2026-04-11 10:30:45.123] [038023] [app] [INF] thread id in header
+[10:30:45] [app] [INF] compact time-only header
+```
+
+Fields available on `format_options`:
+
+| Field            | Default              | Effect                                                       |
+| ---------------- | -------------------- | ------------------------------------------------------------ |
+| `utc`            | `false`              | Use `gmtime` instead of `localtime`.                         |
+| `show_date`      | `true`               | Include the `YYYY-MM-DD ` prefix.                            |
+| `show_thread_id` | `false`              | Include a 6-digit thread id after the timestamp.             |
+| `precision`      | `time_precision::ms` | Fractional digits: `none`, `ms` (3), `us` (6), or `ns` (9).  |
+
 ## Benchmarks
 
-Build and run the comparative benchmark against spdlog:
+Build and run:
 ```console
 $ cmake -B build -DSPDLITE_BUILD_BENCH=ON .
-$ cmake --build build --config Release
-$ ./build/Release/vs_spdlog        # quick benchmarks
-$ ./build/Release/vs_spdlog full   # includes multi-threaded and color sink benchmarks
-```
-
-Sample output (Intel Core Ultra 7 255H, Windows, MSVC, Release):
-```
-spdlite version: 0.1.0
-spdlog version:  1.17.0
-====================== spdlite vs spdlog ======================
-Test                        spdlog       spdlite   speedup
-----------------------------------------------------------------
-disabled                    8.3 ns        0.2 ns   36.34x
-null_fmt_st                65.2 ns       69.2 ns    0.94x
-null_cstr_st              104.5 ns       70.8 ns    1.47x
-file_st                   112.1 ns      108.4 ns    1.03x
-file_mt_1t                127.3 ns      117.1 ns    1.09x
-file_mt                   277.6 ns      190.9 ns    1.45x
-================================================================
+$ cmake --build build
+$ ./build/latency           # quick set
+$ ./build/latency full      # adds multi-threaded + file I/O
 ```
 
 ## License
