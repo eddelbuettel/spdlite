@@ -19,7 +19,7 @@ jobs:
           - { os: macos-latest,  compiler: clang, cc: clang,  cxx: clang++ }
           - { os: windows-latest, compiler: msvc }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Configure (POSIX)
         if: runner.os != 'Windows'
@@ -42,7 +42,7 @@ jobs:
     name: ubuntu-latest / gcc / SPDLITE_USE_STD_FORMAT
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSPDLITE_BUILD_TESTS=ON -DCMAKE_CXX_FLAGS=-DSPDLITE_USE_STD_FORMAT .
