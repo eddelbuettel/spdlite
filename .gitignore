@@ -1,2 +1,21 @@
+# Build directories
 build*
+cmake-build-*/
+
+# IDEs
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor swap/backup
+*.swp
+*.swo
+*~
+
+# Bench / example output
+bench_*.txt
+latency_logs/
 logs/
