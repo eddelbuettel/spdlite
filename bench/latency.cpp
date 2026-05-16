@@ -143,7 +143,10 @@ static void bench_formatter_only(benchmark::State& state) {
 }
 
 int main(int argc, char* argv[]) {
-    int n_threads = benchmark::CPUInfo::Get().num_cpus;
+    // Fixed thread count keeps numbers comparable across machines (was: num_cpus).
+    // Each _mt bench also runs single-threaded to isolate mutex-acquisition cost
+    // from contention cost.
+    constexpr int n_threads = 4;
 
     auto full_bench = argc > 1 && std::string(argv[1]) == "full";
 
@@ -154,10 +157,14 @@ int main(int argc, char* argv[]) {
     benchmark::RegisterBenchmark("color_sink_st", bench_color_sink_st)->UseRealTime();
 
     if (full_bench) {
+        benchmark::RegisterBenchmark("null_sink_mt", bench_null_sink_mt)->Threads(1)->UseRealTime();
         benchmark::RegisterBenchmark("null_sink_mt", bench_null_sink_mt)->Threads(n_threads)->UseRealTime();
+        benchmark::RegisterBenchmark("color_sink_mt", bench_color_sink_mt)->Threads(1)->UseRealTime();
         benchmark::RegisterBenchmark("color_sink_mt", bench_color_sink_mt)->Threads(n_threads)->UseRealTime();
         benchmark::RegisterBenchmark("basic_file_st", bench_basic_file_st)->UseRealTime();
+        benchmark::RegisterBenchmark("basic_file_mt", bench_basic_file_mt)->Threads(1)->UseRealTime();
         benchmark::RegisterBenchmark("basic_file_mt", bench_basic_file_mt)->Threads(n_threads)->UseRealTime();
+        benchmark::RegisterBenchmark("shared_file_mt", bench_shared_file_mt)->Threads(1)->UseRealTime();
         benchmark::RegisterBenchmark("shared_file_mt", bench_shared_file_mt)->Threads(n_threads)->UseRealTime();
     }
 
