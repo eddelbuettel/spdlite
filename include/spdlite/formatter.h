@@ -4,12 +4,49 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <ctime>
 #include <string>
+
+// Platform thread-ID source for the optional [tid] header field.
+#if defined(__linux__)
+    #include <sys/syscall.h>
+    #include <unistd.h>
+#elif defined(__APPLE__)
+    #include <pthread.h>
+#elif defined(_WIN32)
+extern "C" __declspec(dllimport) unsigned long __stdcall GetCurrentThreadId(void);
+#else
+    #include <functional>
+    #include <thread>
+#endif
 
 #include "common.h"
 
 namespace spdlite {
+
+namespace detail {
+
+// Cached per-thread ID, already capped to 6 decimal digits to match the fixed
+// header field width. Hot-path cost: one thread_local load.
+inline std::uint32_t this_thread_id_log() noexcept {
+    thread_local const std::uint32_t cached = []() noexcept -> std::uint32_t {
+        std::uint64_t raw = 0;
+#if defined(__linux__)
+        raw = static_cast<std::uint64_t>(::syscall(SYS_gettid));
+#elif defined(__APPLE__)
+        ::pthread_threadid_np(nullptr, &raw);
+#elif defined(_WIN32)
+        raw = static_cast<std::uint64_t>(::GetCurrentThreadId());
+#else
+        raw = static_cast<std::uint64_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
+#endif
+        return static_cast<std::uint32_t>(raw % 1'000'000ULL);
+    }();
+    return cached;
+}
+
+}  // namespace detail
 
 inline void put2(char* dst, int n) {
     dst[0] = static_cast<char>('0' + n / 10);
@@ -49,6 +86,7 @@ enum class time_precision { none, ms, us, ns };
 struct format_options {
     bool utc = false;                               // gmtime instead of localtime
     bool show_date = true;                          // include "YYYY-MM-DD " prefix
+    bool show_thread_id = false;                    // include "[tid] " after the timestamp
     time_precision precision = time_precision::ms;  // .mmm (default), .uuuuuu, .nnnnnnnnn, or none
 };
 
@@ -92,6 +130,9 @@ struct simple_formatter {
                     break;
             }
         }
+        if (opts_.show_thread_id) {
+            put6(header_.data() + tid_offset_, detail::this_thread_id_log());
+        }
         std::memcpy(header_.data() + level_offset_, to_string_view(lvl).data(), level_width);
         dest.append(header_.data(), header_.data() + header_.size());
     }
@@ -116,6 +157,7 @@ private:
     format_options opts_;
     std::string header_;
     std::size_t frac_offset_{};
+    std::size_t tid_offset_{};
     std::size_t level_offset_{};
     std::chrono::seconds last_secs_{};
 
@@ -128,6 +170,11 @@ private:
             header_.append(frac_width(opts_.precision), '0');
         }
         header_.append("] ");
+        if (opts_.show_thread_id) {
+            header_.push_back('[');
+            tid_offset_ = header_.size();
+            header_.append("000000] ");  // 6-digit zero-padded thread id, patched per call
+        }
         if (!logger_name.empty()) {
             header_.push_back('[');
             header_.append(logger_name);

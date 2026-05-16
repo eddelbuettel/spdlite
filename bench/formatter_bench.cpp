@@ -119,6 +119,21 @@ static void bench_options_varying(benchmark::State &state) {
     }
 }
 
+// thread_id path - measures the per-call cost of the show_thread_id field
+// (one thread_local load + one put6 + a longer cached-header memcpy).
+template <bool ShowTid>
+static void bench_options_thread_id(benchmark::State &state) {
+    simple_formatter fmt("mylogger", format_options{.show_thread_id = ShowTid});
+    memory_buf_t buf;
+    auto now = log_clock::now();
+    format_line(fmt, buf, now, level::info, "warmup");  // prime caches (timestamp + thread_local tid)
+    for (auto _ : state) {
+        buf.clear();
+        format_line(fmt, buf, now, level::info, "Hello logger: msg number 12345...............");
+        benchmark::DoNotOptimize(buf.data());
+    }
+}
+
 BENCHMARK(bench_format_short);
 BENCHMARK(bench_format_typical);
 BENCHMARK(bench_format_long);
@@ -139,5 +154,9 @@ BENCHMARK(bench_options_varying<false, true, time_precision::ms>)->Name("opts_va
 BENCHMARK(bench_options_varying<true, true, time_precision::ms>)->Name("opts_varying/utc");
 BENCHMARK(bench_options_varying<false, false, time_precision::ms>)->Name("opts_varying/no_date");
 BENCHMARK(bench_options_varying<false, true, time_precision::ns>)->Name("opts_varying/ns");
+
+// thread_id pair: side-by-side baseline (off) vs the new path (on).
+BENCHMARK(bench_options_thread_id<false>)->Name("opts_cached/tid_off");
+BENCHMARK(bench_options_thread_id<true>)->Name("opts_cached/tid_on");
 
 BENCHMARK_MAIN();

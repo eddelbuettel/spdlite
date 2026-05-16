@@ -214,3 +214,45 @@ TEST_CASE("level_offset() reflects the format_options layout") {
     // with date, ns precision, no name: "[YYYY-MM-DD HH:MM:SS.nnnnnnnnn] [" -> level char at offset 33
     CHECK(simple_formatter({}, format_options{.precision = time_precision::ns}).level_offset() == 33);
 }
+
+TEST_CASE("format_options{show_thread_id=true} adds a 6-digit tid field after the timestamp") {
+    simple_formatter fmt{"app", format_options{.show_thread_id = true}};
+    auto out = format_one(fmt, log_clock::time_point{seconds{1700000000} + milliseconds{123}}, level::info);
+
+    // shape: "[YYYY-MM-DD HH:MM:SS.mmm] [tttttt] [app] [INF] "
+    //         0                     24 26     33 35   39 41
+    CHECK(out[24] == ']');
+    CHECK(out[26] == '[');
+    CHECK(out[33] == ']');
+    CHECK(out.substr(35, 5) == "[app]");
+    CHECK(contains(out, "[INF] "));
+
+    // Field is six decimal digits.
+    const auto tid_field = out.substr(27, 6);
+    CHECK(tid_field.size() == 6);
+    for (char c : tid_field) CHECK(c >= '0');
+    for (char c : tid_field) CHECK(c <= '9');
+}
+
+TEST_CASE("show_thread_id is stable per thread") {
+    // The tid is cached in a thread_local, so multiple calls from the same thread
+    // must produce the same six digits.
+    simple_formatter fmt{"", format_options{.show_thread_id = true}};
+    auto base = log_clock::time_point{seconds{1700000000}};
+    auto a = format_one(fmt, base, level::info);
+    auto b = format_one(fmt, base + milliseconds{500}, level::warn);
+    // tid field lives at offset 27..32 (anon header)
+    CHECK(a.substr(27, 6) == b.substr(27, 6));
+}
+
+TEST_CASE("show_thread_id shifts level_offset by 9 bytes") {
+    // Adds "[tttttt] " = 9 bytes between timestamp and name/level brackets.
+    const auto base = simple_formatter{}.level_offset();
+    const auto with_tid = simple_formatter({}, format_options{.show_thread_id = true}).level_offset();
+    CHECK(with_tid == base + 9);
+
+    // Same shift with a logger name.
+    const auto named = simple_formatter{"app"}.level_offset();
+    const auto named_tid = simple_formatter{"app", format_options{.show_thread_id = true}}.level_offset();
+    CHECK(named_tid == named + 9);
+}
