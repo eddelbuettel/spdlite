@@ -9,6 +9,7 @@
 
 void banner();
 void log_levels();
+void format_options_example();
 void file_sink_example();
 void rotating_file_sink_example();
 void multi_sink_example();
@@ -17,6 +18,7 @@ void shared_file_sink_example();
 int main() {
     banner();
     log_levels();
+    format_options_example();
     file_sink_example();
     rotating_file_sink_example();
     multi_sink_example();
@@ -52,6 +54,20 @@ void log_levels() {
     console.warn("This is a {} message", "warning");
     console.error("This is a {} message", "error");
     console.critical("This is a {} message", "critical");
+}
+
+// Reconfigure the header layout at runtime via format_options.
+// Default shape: [YYYY-MM-DD HH:MM:SS.mmm] [name] [L] payload
+void format_options_example() {
+    using namespace spdlite;
+    logger_st log("app", console_sink{});
+
+    log.format_options({.utc = true});
+    log.format_options({.show_date = false});
+    log.format_options({.precision = time_precision::ns});
+    log.format_options({.precision = time_precision::none});
+    log.format_options({.show_thread_id = true});
+    log.format_options({.show_date = false, .precision = time_precision::none});
 }
 
 // Log to a file via file_sink. The sink creates parent directories
