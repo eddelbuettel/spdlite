@@ -60,7 +60,7 @@ void log_levels() {
 // Default shape: [YYYY-MM-DD HH:MM:SS.mmm] [name] [LVL] payload
 void format_options_example() {
     using namespace spdlite;
-    logger_st log("app", console_sink{});
+    logger_st log(console_sink{});
 
     log.format_options({.utc = true});
     log.format_options({.show_date = false});
