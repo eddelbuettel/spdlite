@@ -174,21 +174,29 @@ inline bool fwrite_bytes(const void* ptr, std::size_t n, std::FILE* fp) {
 // lightweight message descriptor passed to sinks - all views, no ownership.
 // `formatted` covers the whole line the logger produced (header + payload + newline).
 // `payload` is the raw user message, no header, no trailing newline.
+// `level_offset` is the byte offset of the level tag inside `formatted` (for color sinks).
 struct log_msg {
     log_clock::time_point time;
     string_view_t logger_name;
     level log_level{level::off};
     string_view_t formatted;
     string_view_t payload;
+    std::size_t level_offset{0};
 
     log_msg() = default;
 
-    log_msg(log_clock::time_point log_time, string_view_t name, level lvl, string_view_t line, string_view_t raw)
+    log_msg(log_clock::time_point log_time,
+            string_view_t name,
+            level lvl,
+            string_view_t line,
+            string_view_t raw,
+            std::size_t lvl_offset)
         : time(log_time),
           logger_name(name),
           log_level(lvl),
           formatted(line),
-          payload(raw) {}
+          payload(raw),
+          level_offset(lvl_offset) {}
 };
 
 // logger-side helpers used by the logger template

@@ -8,8 +8,8 @@
 using namespace spdlite;
 
 // appends: header + payload + \r?\n - mirrors what logger does per call
-static inline void format_line(simple_formatter &fmt, memory_buf_t &dest,
-                               log_clock::time_point t, level lvl, string_view_t payload) {
+static inline void format_line(
+    simple_formatter &fmt, memory_buf_t &dest, log_clock::time_point t, level lvl, string_view_t payload) {
     fmt.format_header(t, lvl, dest);
     dest.append(payload.data(), payload.data() + payload.size());
 #ifdef _WIN32
@@ -88,10 +88,56 @@ static void bench_timestamp_varying_ms(benchmark::State &state) {
     }
 }
 
+// Per-call hot path under each format_options combination - regression guard.
+// Stays in the cached-second path so only the per-call patcher + memcpy varies.
+template <bool Utc, bool ShowDate, time_precision Prec>
+static void bench_options_cached(benchmark::State &state) {
+    simple_formatter fmt("mylogger", format_options{.utc = Utc, .show_date = ShowDate, .precision = Prec});
+    memory_buf_t buf;
+    auto now = log_clock::now();
+    format_line(fmt, buf, now, level::info, "warmup");  // prime the timestamp cache
+    for (auto _ : state) {
+        buf.clear();
+        format_line(fmt, buf, now, level::info, "Hello logger: msg number 12345...............");
+        benchmark::DoNotOptimize(buf.data());
+    }
+}
+
+// rebuild_timestamp path - varying millisecond crosses second boundaries occasionally
+// and exercises localtime_r/gmtime_r in the rebuild step.
+template <bool Utc, bool ShowDate, time_precision Prec>
+static void bench_options_varying(benchmark::State &state) {
+    simple_formatter fmt("mylogger", format_options{.utc = Utc, .show_date = ShowDate, .precision = Prec});
+    memory_buf_t buf;
+    int ms = 0;
+    auto base = std::chrono::system_clock::now();
+    for (auto _ : state) {
+        auto t = base + std::chrono::milliseconds(ms++ % 1000);
+        buf.clear();
+        format_line(fmt, buf, t, level::info, "Hello logger: msg number 12345...............");
+        benchmark::DoNotOptimize(buf.data());
+    }
+}
+
 BENCHMARK(bench_format_short);
 BENCHMARK(bench_format_typical);
 BENCHMARK(bench_format_long);
 BENCHMARK(bench_timestamp_cached);
 BENCHMARK(bench_timestamp_varying_ms);
+
+// cached-path matrix: every relevant format_options combination
+BENCHMARK(bench_options_cached<false, true, time_precision::ms>)->Name("opts_cached/default");
+BENCHMARK(bench_options_cached<true, true, time_precision::ms>)->Name("opts_cached/utc");
+BENCHMARK(bench_options_cached<false, false, time_precision::ms>)->Name("opts_cached/no_date");
+BENCHMARK(bench_options_cached<false, true, time_precision::none>)->Name("opts_cached/no_frac");
+BENCHMARK(bench_options_cached<false, true, time_precision::us>)->Name("opts_cached/us");
+BENCHMARK(bench_options_cached<false, true, time_precision::ns>)->Name("opts_cached/ns");
+BENCHMARK(bench_options_cached<false, false, time_precision::none>)->Name("opts_cached/minimal");
+
+// varying-time matrix: catches regressions in rebuild_timestamp (UTC vs local + layout shift)
+BENCHMARK(bench_options_varying<false, true, time_precision::ms>)->Name("opts_varying/default");
+BENCHMARK(bench_options_varying<true, true, time_precision::ms>)->Name("opts_varying/utc");
+BENCHMARK(bench_options_varying<false, false, time_precision::ms>)->Name("opts_varying/no_date");
+BENCHMARK(bench_options_varying<false, true, time_precision::ns>)->Name("opts_varying/ns");
 
 BENCHMARK_MAIN();

@@ -137,3 +137,80 @@ TEST_CASE("format_header patches only the millis when within the same second") {
     CHECK(d.substr(21, 3) == "000");
     CHECK(e.substr(21, 3) == "027");
 }
+
+TEST_CASE("format_options{utc=true} uses gmtime for the timestamp") {
+    // 1700000000 = 2023-11-14 22:13:20 UTC. Pin to UTC and verify exact bytes;
+    // works regardless of the test runner's local timezone.
+    simple_formatter fmt{"", format_options{.utc = true}};
+    auto tp = log_clock::time_point{seconds{1700000000}};
+    auto out = format_one(fmt, tp, level::info);
+    CHECK(out.substr(1, 19) == "2023-11-14 22:13:20");
+}
+
+TEST_CASE("format_options{show_date=false} drops the YYYY-MM-DD prefix") {
+    simple_formatter fmt{"app", format_options{.show_date = false}};
+    auto out = format_one(fmt, log_clock::time_point{seconds{1700000000} + milliseconds{456}}, level::warn);
+
+    // shape: [HH:MM:SS.mmm] [app] [WRN] - first char is '[', position 9 is '.', position 13 is ']'
+    CHECK(out[0] == '[');
+    CHECK(out[9] == '.');
+    CHECK(out[13] == ']');
+    CHECK(out.substr(10, 3) == "456");
+    CHECK(contains(out, "[app]"));
+    CHECK(contains(out, "[WRN] "));
+    CHECK(!contains(out, "2023-"));  // no date anywhere
+}
+
+TEST_CASE("format_options{precision=none} drops the fractional suffix") {
+    simple_formatter fmt{"app", format_options{.precision = time_precision::none}};
+    auto a = format_one(fmt, log_clock::time_point{seconds{1700000000}}, level::info);
+    auto b = format_one(fmt, log_clock::time_point{seconds{1700000000} + milliseconds{789}}, level::info);
+
+    // shape: [YYYY-MM-DD HH:MM:SS] [app] [INF] - closing ']' at offset 20, no '.' before it
+    CHECK(a[20] == ']');
+    CHECK(!contains(a, ".000"));
+    CHECK(!contains(a, ".789"));
+    CHECK(a == b);  // same second, no fractional - identical output
+}
+
+TEST_CASE("format_options{precision=us} writes 6 fractional digits") {
+    simple_formatter fmt{"", format_options{.precision = time_precision::us}};
+    // 1700000000 s + 123456 µs
+    auto tp = log_clock::time_point{seconds{1700000000} + microseconds{123456}};
+    auto out = format_one(fmt, tp, level::info);
+    // header shape: [YYYY-MM-DD HH:MM:SS.uuuuuu] - '.' at 20, 6 digits at 21..26, ']' at 27
+    CHECK(out[20] == '.');
+    CHECK(out.substr(21, 6) == "123456");
+    CHECK(out[27] == ']');
+}
+
+TEST_CASE("format_options{precision=ns} writes 9 fractional digits") {
+    simple_formatter fmt{"", format_options{.precision = time_precision::ns}};
+    auto tp = log_clock::time_point{seconds{1700000000} + nanoseconds{123456789}};
+    auto out = format_one(fmt, tp, level::info);
+    // header shape: [YYYY-MM-DD HH:MM:SS.nnnnnnnnn] - '.' at 20, 9 digits at 21..29, ']' at 30
+    CHECK(out[20] == '.');
+    CHECK(out.substr(21, 9) == "123456789");
+    CHECK(out[30] == ']');
+}
+
+TEST_CASE("format_options{show_date=false, precision=none} produces time-only header") {
+    simple_formatter fmt{"", format_options{.show_date = false, .precision = time_precision::none}};
+    auto out = format_one(fmt, log_clock::time_point{seconds{1700000000}}, level::info);
+    // shape: "[HH:MM:SS] [INF] " - 17 chars
+    CHECK(out.size() == 17);
+    CHECK(out[0] == '[');
+    CHECK(out[9] == ']');
+    CHECK(out.substr(11) == "[INF] ");
+}
+
+TEST_CASE("level_offset() reflects the format_options layout") {
+    // no date, no fractional, no name: "[HH:MM:SS] [" -> level char at offset 12
+    CHECK(simple_formatter({}, format_options{.show_date = false, .precision = time_precision::none}).level_offset() == 12);
+    // no date, with millis, no name: "[HH:MM:SS.mmm] [" -> level char at offset 16
+    CHECK(simple_formatter({}, format_options{.show_date = false}).level_offset() == 16);
+    // with date, no fractional, no name: "[YYYY-MM-DD HH:MM:SS] [" -> level char at offset 23
+    CHECK(simple_formatter({}, format_options{.precision = time_precision::none}).level_offset() == 23);
+    // with date, ns precision, no name: "[YYYY-MM-DD HH:MM:SS.nnnnnnnnn] [" -> level char at offset 33
+    CHECK(simple_formatter({}, format_options{.precision = time_precision::ns}).level_offset() == 33);
+}

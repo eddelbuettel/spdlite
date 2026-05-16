@@ -45,6 +45,7 @@ void log_levels() {
     using namespace spdlite;
     logger_st console(console_sink{});
     console.log_level(level::trace);
+
     console.trace("This is a {} message", "trace");
     console.debug("This is a {} message", "debug");
     console.info("This is a {} message", "info");

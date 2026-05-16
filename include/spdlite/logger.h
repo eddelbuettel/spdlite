@@ -105,6 +105,12 @@ public:
     [[nodiscard]] level flush_level() const noexcept { return flush_level_.load(std::memory_order_relaxed); }
     [[nodiscard]] const std::string& name() const noexcept { return name_; }
 
+    // Reconfigure the cached header (UTC, show_date, show_millis). Cheap - one ctor call.
+    void format_options(format_options opts) {
+        std::lock_guard<Mutex> lock(mutex_);
+        formatter_ = simple_formatter{name_, opts};
+    }
+
     void flush() const noexcept {
         std::lock_guard<Mutex> lock(mutex_);
         std::apply([](auto&... s) { (s.flush(), ...); }, sinks_);
@@ -135,7 +141,7 @@ private:
             buf_.push_back('\n');
             string_view_t formatted{buf_.data(), buf_.size()};
             string_view_t payload{buf_.data() + payload_start, payload_end - payload_start};
-            log_msg msg(now, name_, lvl, formatted, payload);
+            log_msg msg(now, name_, lvl, formatted, payload, formatter_.level_offset());
             std::apply([&](auto&... s) { (s.write(msg), ...); }, sinks_);
             if (should_flush(lvl)) std::apply([](auto&... s) { (s.flush(), ...); }, sinks_);
         } catch (const std::exception& ex) {
@@ -176,7 +182,7 @@ private:
             buf_.push_back('\n');
             string_view_t formatted{buf_.data(), buf_.size()};
             string_view_t payload{buf_.data() + payload_start, payload_end - payload_start};
-            log_msg msg(now, name_, lvl, formatted, payload);
+            log_msg msg(now, name_, lvl, formatted, payload, formatter_.level_offset());
             std::apply([&](auto&... s) { (s.write(msg), ...); }, sinks_);
             if (should_flush(lvl)) std::apply([](auto&... s) { (s.flush(), ...); }, sinks_);
         } catch (const std::exception& ex) {

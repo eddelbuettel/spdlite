@@ -30,6 +30,7 @@ struct capture_sink {
         std::vector<std::string> formatted;
         std::vector<std::string> payloads;
         std::vector<spdlite::level> levels;
+        std::vector<std::size_t> level_offsets;
         std::size_t flush_count{0};
         std::atomic<bool> fail_writes{false};
     };
@@ -48,6 +49,7 @@ struct capture_sink {
         state->formatted.emplace_back(msg.formatted);
         state->payloads.emplace_back(msg.payload);
         state->levels.push_back(msg.log_level);
+        state->level_offsets.push_back(msg.level_offset);
     }
 
     void flush() const {

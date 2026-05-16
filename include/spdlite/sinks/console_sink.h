@@ -91,7 +91,7 @@ struct color_sink_base {
             return;
         }
 
-        const auto level_start = msg.logger_name.empty() ? 27 : 27 + msg.logger_name.size() + 3;
+        const auto level_start = msg.level_offset;
         const auto level_end = level_start + level_width;
 
         // before level tag
@@ -208,7 +208,7 @@ struct color_sink_base {
         }
 
         auto color = colors_[static_cast<std::size_t>(msg.log_level)];
-        const auto level_start = msg.logger_name.empty() ? 27 : 27 + msg.logger_name.size() + 3;
+        const auto level_start = msg.level_offset;
         const auto level_end = level_start + level_width;
 
         cbuf_.clear();

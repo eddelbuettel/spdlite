@@ -173,6 +173,54 @@ TEST_CASE("logger never throws to caller when a sink throws on write") {
     CHECK(cap.state->payloads[0] == "after");
 }
 
+TEST_CASE("format_options() reconfigures the header in place") {
+    capture_sink cap;
+    logger_st<capture_sink> log{"app", cap};
+
+    log.info("first");  // default shape
+    log.format_options({.utc = true, .show_date = false, .precision = time_precision::none});
+    log.info("second");  // new shape
+
+    REQUIRE(cap.state->formatted.size() == 2);
+    // first line: full default header includes the date and the .mmm
+    CHECK(contains(cap.state->formatted[0], "[app]"));
+    CHECK(contains(cap.state->formatted[0], "[INF] first"));
+    // second line: time-only header, no date, no millis
+    const auto& second = cap.state->formatted[1];
+    CHECK(second[0] == '[');
+    CHECK(second[9] == ']');  // [HH:MM:SS]
+    CHECK(contains(second, "] [app] [INF] second"));
+    CHECK(!contains(second, "."));  // no .mmm anywhere in header
+}
+
+TEST_CASE("log_msg.level_offset always points at the level tag, for any format_options") {
+    // Regression guard: console_sink (and any color sink) relies on msg.level_offset
+    // landing exactly on the 3-byte level tag. If the logger forgets to propagate it
+    // or the formatter miscomputes it, color codes wrap the wrong bytes.
+    auto check = [](format_options opts, level lvl, std::string_view tag, std::string_view name) {
+        capture_sink cap;
+        logger_st<capture_sink> log{std::string{name}, cap};
+        log.format_options(opts);
+        log.log_level(level::trace);
+        log.log(lvl, "x");
+        REQUIRE(cap.state->formatted.size() == 1);
+        const auto& line = cap.state->formatted[0];
+        const auto offset = cap.state->level_offsets[0];
+        CHECK(line.substr(offset, level_width) == tag);
+    };
+    // matrix: every flag combo x named/unnamed x representative levels
+    check({}, level::info, "INF", "app");
+    check({}, level::info, "INF", "");
+    check({.utc = true}, level::warn, "WRN", "app");
+    check({.show_date = false}, level::trace, "TRC", "app");
+    check({.show_date = false}, level::trace, "TRC", "");
+    check({.precision = time_precision::none}, level::err, "ERR", "app");
+    check({.precision = time_precision::us}, level::critical, "CRT", "app");
+    check({.precision = time_precision::ns}, level::debug, "DBG", "app");
+    check({.show_date = false, .precision = time_precision::none}, level::info, "INF", "");
+    check({.utc = true, .show_date = false, .precision = time_precision::ns}, level::warn, "WRN", "n");
+}
+
 TEST_CASE("formatted line contains the rendered payload after the header") {
     capture_sink cap;
     logger_st<capture_sink> log{"name", cap};
