@@ -29,12 +29,17 @@ inline void put4(char* dst, int n) {
     dst[3] = static_cast<char>('0' + n % 10);
 }
 
-// Write n right-aligned into width digits, zero-padded.
-inline void put_n(char* dst, std::uint64_t n, int width) {
-    for (int i = width - 1; i >= 0; --i) {
-        dst[i] = static_cast<char>('0' + n % 10);
-        n /= 10;
-    }
+// Write a 6-digit zero-padded number (max 999,999) as two 3-digit halves.
+inline void put6(char* dst, std::uint64_t n) {
+    put3(dst, static_cast<int>(n / 1000));
+    put3(dst + 3, static_cast<int>(n % 1000));
+}
+
+// Write a 9-digit zero-padded number (max 999,999,999) as three 3-digit segments.
+inline void put9(char* dst, std::uint64_t n) {
+    put3(dst, static_cast<int>(n / 1'000'000));
+    put3(dst + 3, static_cast<int>((n / 1000) % 1000));
+    put3(dst + 6, static_cast<int>(n % 1000));
 }
 
 // Fractional-second resolution for the timestamp. none = no ".xxx" suffix at all.
@@ -72,25 +77,22 @@ struct simple_formatter {
         }
 
         if (opts_.precision != time_precision::none) {
-            const auto frac_ns = duration_cast<nanoseconds>(time_since_epoch) - duration_cast<nanoseconds>(secs);
-            std::uint64_t value = 0;
+            const auto frac_ns = (duration_cast<nanoseconds>(time_since_epoch) - duration_cast<nanoseconds>(secs)).count();
             switch (opts_.precision) {
                 case time_precision::ms:
-                    value = frac_ns.count() / 1'000'000;
+                    put3(header_.data() + frac_offset_, static_cast<int>(frac_ns / 1'000'000));
                     break;
                 case time_precision::us:
-                    value = frac_ns.count() / 1'000;
+                    put6(header_.data() + frac_offset_, static_cast<std::uint64_t>(frac_ns / 1'000));
                     break;
                 case time_precision::ns:
-                    value = frac_ns.count();
+                    put9(header_.data() + frac_offset_, static_cast<std::uint64_t>(frac_ns));
                     break;
                 case time_precision::none:
                     break;
             }
-            put_n(header_.data() + frac_offset_, value, frac_width(opts_.precision));
         }
         std::memcpy(header_.data() + level_offset_, to_string_view(lvl).data(), level_width);
-
         dest.append(header_.data(), header_.data() + header_.size());
     }
 
