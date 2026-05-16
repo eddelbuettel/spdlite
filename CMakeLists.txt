@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.23)
-project(spdlite LANGUAGES CXX)
+
+include(cmake/utils.cmake)
+
+spdlite_extract_version()
+project(spdlite VERSION ${SPDLITE_VERSION} LANGUAGES CXX)
+message(STATUS "Build spdlite: ${SPDLITE_VERSION}")
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
