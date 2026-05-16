@@ -220,11 +220,14 @@ TEST_CASE("format_options{precision=us} writes 6 fractional digits") {
 
 TEST_CASE("format_options{precision=ns} writes 9 fractional digits") {
     simple_formatter fmt{"", format_options{.precision = time_precision::ns}};
-    auto tp = log_clock::time_point{seconds{1700000000} + nanoseconds{123456789}};
+    // Build from microseconds so the duration converts implicitly into every
+    // platform's system_clock::duration (nano on Linux glibc, 100ns on MSVC,
+    // micro on macOS libc++). The trailing 3 ns digits land as 000.
+    auto tp = log_clock::time_point{seconds{1700000000} + microseconds{123456}};
     auto out = format_one(fmt, tp, level::info);
     // header shape: [YYYY-MM-DD HH:MM:SS.nnnnnnnnn] - '.' at 20, 9 digits at 21..29, ']' at 30
     CHECK(out[20] == '.');
-    CHECK(out.substr(21, 9) == "123456789");
+    CHECK(out.substr(21, 9) == "123456000");
     CHECK(out[30] == ']');
 }
 
