@@ -45,45 +45,17 @@ $ cmake -DCMAKE_CXX_FLAGS="-DSPDLITE_USE_STD_FORMAT" ..
 
 ## Formatter options
 
-The default header is `[YYYY-MM-DD HH:MM:SS.mmm] [name] [L] payload`. Reconfigure
+The default header is `[YYYY-MM-DD HH:MM:SS.mmm] [name] [LVL] payload`. Reconfigure
 it at runtime via `format_options` - the cached header is rebuilt once and the
 hot path remains "patch a few bytes + memcpy":
 
 ```c++
-logger_st log("app", console_sink{});
-log.info("default header");
-
 log.format_options({.utc = true});
-log.info("UTC timestamp");
-
-log.format_options({.show_date = false});
-log.info("no date prefix");
-
 log.format_options({.precision = time_precision::ns});
-log.info("nanosecond fractional digits");
-
-log.format_options({.precision = time_precision::none});
-log.info("no fractional digits");
-
-log.format_options({.show_thread_id = true});
-log.info("thread id in header");
-
 log.format_options({.show_date = false, .precision = time_precision::none});
-log.info("compact time-only header");
 ```
 
-Output:
-```
-[2026-04-11 10:30:45.123] [app] [INF] default header
-[2026-04-11 07:30:45.123] [app] [INF] UTC timestamp
-[10:30:45.123] [app] [INF] no date prefix
-[2026-04-11 10:30:45.123456789] [app] [INF] nanosecond fractional digits
-[2026-04-11 10:30:45] [app] [INF] no fractional digits
-[2026-04-11 10:30:45.123] [038023] [app] [INF] thread id in header
-[10:30:45] [app] [INF] compact time-only header
-```
-
-Fields available on `format_options`:
+See the table below for all available fields:
 
 | Field            | Default              | Effect                                                       |
 | ---------------- | -------------------- | ------------------------------------------------------------ |

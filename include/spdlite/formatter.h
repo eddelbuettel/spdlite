@@ -90,7 +90,7 @@ struct format_options {
     time_precision precision = time_precision::ms;  // .mmm (default), .uuuuuu, .nnnnnnnnn, or none
 };
 
-// Default shape: [YYYY-MM-DD HH:MM:SS.mmm] [name] [L] payload\n
+// Default shape: [YYYY-MM-DD HH:MM:SS.mmm] [name] [LVL] payload\n
 // Layout flexes with format_options - the cached header is rebuilt on options change,
 // so the hot path stays "patch a few bytes + memcpy" regardless of layout.
 struct simple_formatter {

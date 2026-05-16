@@ -57,7 +57,7 @@ void log_levels() {
 }
 
 // Reconfigure the header layout at runtime via format_options.
-// Default shape: [YYYY-MM-DD HH:MM:SS.mmm] [name] [L] payload
+// Default shape: [YYYY-MM-DD HH:MM:SS.mmm] [name] [LVL] payload
 void format_options_example() {
     using namespace spdlite;
     logger_st log("app", console_sink{});
