@@ -45,6 +45,40 @@ TEST_CASE("put4 writes a zero-padded 4-digit number") {
     CHECK(std::string_view(buf, 4) == "9999");
 }
 
+TEST_CASE("put6 writes a zero-padded 6-digit number") {
+    char buf[6];
+    put6(buf, 0);
+    CHECK(std::string_view(buf, 6) == "000000");
+    put6(buf, 7);
+    CHECK(std::string_view(buf, 6) == "000007");
+    put6(buf, 999);
+    CHECK(std::string_view(buf, 6) == "000999");
+    put6(buf, 1000);
+    CHECK(std::string_view(buf, 6) == "001000");
+    put6(buf, 123456);
+    CHECK(std::string_view(buf, 6) == "123456");
+    put6(buf, 999999);
+    CHECK(std::string_view(buf, 6) == "999999");
+}
+
+TEST_CASE("put9 writes a zero-padded 9-digit number") {
+    char buf[9];
+    put9(buf, 0);
+    CHECK(std::string_view(buf, 9) == "000000000");
+    put9(buf, 7);
+    CHECK(std::string_view(buf, 9) == "000000007");
+    put9(buf, 999);
+    CHECK(std::string_view(buf, 9) == "000000999");
+    put9(buf, 1000);
+    CHECK(std::string_view(buf, 9) == "000001000");
+    put9(buf, 999999);
+    CHECK(std::string_view(buf, 9) == "000999999");
+    put9(buf, 123456789);
+    CHECK(std::string_view(buf, 9) == "123456789");
+    put9(buf, 999999999);
+    CHECK(std::string_view(buf, 9) == "999999999");
+}
+
 // Helper: extract the entire produced header as a string.
 static std::string format_one(simple_formatter& fmt, log_clock::time_point tp, level lvl) {
     memory_buf_t buf;
