@@ -36,21 +36,29 @@ TEST_CASE("sinks-only ctor produces an empty name and no name bracket in the hea
 TEST_CASE("log_level get/set round trips") {
     logger_st<null_sink> log{"x", null_sink{}};
     CHECK(log.log_level() == level::info);  // default
-    log.log_level(level::trace);
-    CHECK(log.log_level() == level::trace);
-    log.log_level(level::critical);
-    CHECK(log.log_level() == level::critical);
+    constexpr level all[] = {level::trace, level::debug, level::info, level::warn, level::err, level::critical, level::off};
+    for (auto lvl : all) {
+        log.log_level(lvl);
+        CHECK(log.log_level() == lvl);
+    }
 }
 
 TEST_CASE("flush_level get/set round trips; default is off (no auto-flush)") {
     logger_st<null_sink> log{"x", null_sink{}};
     CHECK(log.flush_level() == level::off);
-    CHECK(log.should_flush(level::critical) == false);  // off => never
-    log.flush_level(level::warn);
-    CHECK(log.flush_level() == level::warn);
-    CHECK(log.should_flush(level::info) == false);
-    CHECK(log.should_flush(level::warn) == true);
-    CHECK(log.should_flush(level::err) == true);
+    // off => never auto-flush in practice (callers never log at level::off)
+    CHECK(log.should_flush(level::trace) == false);
+    CHECK(log.should_flush(level::critical) == false);
+
+    constexpr level all[] = {level::trace, level::debug, level::info, level::warn, level::err, level::critical, level::off};
+    for (auto fl : all) {
+        log.flush_level(fl);
+        CHECK(log.flush_level() == fl);
+        for (auto msg : all) {
+            const bool expected = static_cast<int>(msg) >= static_cast<int>(fl);
+            CHECK(log.should_flush(msg) == expected);
+        }
+    }
 }
 
 TEST_CASE("auto-flush triggers when message level >= flush_level") {
@@ -137,6 +145,32 @@ TEST_CASE("formatted line ends in a newline") {
     log.info("hello");
     REQUIRE(cap.state->formatted.size() == 1);
     CHECK(cap.state->formatted[0].back() == '\n');
+}
+
+TEST_CASE("logger never throws to caller when a sink throws on write") {
+    capture_sink cap;
+    cap.fail_writes(true);
+    logger_st<capture_sink> log{"x", cap};
+    log.log_level(level::trace);  // exercise every level path
+
+    // Every entrypoint must swallow the sink's exception. Logger writes a line to
+    // stderr per caught exception - expected noise during this test.
+    CHECK_NOTHROW(log.trace("t"));
+    CHECK_NOTHROW(log.debug("d"));
+    CHECK_NOTHROW(log.info("hello"));
+    CHECK_NOTHROW(log.warn("w"));
+    CHECK_NOTHROW(log.error("e"));
+    CHECK_NOTHROW(log.critical("c"));
+    CHECK_NOTHROW(log.info("{} + {} = {}", 1, 2, 3));  // fmt path
+    CHECK_NOTHROW(log.info(string_view_t{"raw"}));     // string_view path
+    CHECK_NOTHROW(log.log(level::info, "via log()"));  // generic log()
+    CHECK(cap.state->payloads.empty());                // nothing reached the sink
+
+    // logger recovers once the sink stops throwing
+    cap.fail_writes(false);
+    CHECK_NOTHROW(log.info("after"));
+    REQUIRE(cap.state->payloads.size() == 1);
+    CHECK(cap.state->payloads[0] == "after");
 }
 
 TEST_CASE("formatted line contains the rendered payload after the header") {

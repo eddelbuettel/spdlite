@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -30,19 +31,26 @@ struct capture_sink {
         std::vector<std::string> payloads;
         std::vector<spdlite::level> levels;
         std::size_t flush_count{0};
+        std::atomic<bool> fail_writes{false};
     };
 
     capture_sink()
         : state(std::make_shared<state_t>()) {}
 
-    void write(const spdlite::log_msg& msg) {
+    // When true, every subsequent write() call throws unconditionally.
+    void fail_writes(bool v) const { state->fail_writes.store(v, std::memory_order_relaxed); }
+
+    void write(const spdlite::log_msg& msg) const {
+        if (state->fail_writes.load(std::memory_order_relaxed)) {
+            throw std::runtime_error("capture_sink: induced write failure");
+        }
         std::lock_guard<std::mutex> lock(state->mu);
         state->formatted.emplace_back(msg.formatted);
         state->payloads.emplace_back(msg.payload);
         state->levels.push_back(msg.log_level);
     }
 
-    void flush() {
+    void flush() const {
         std::lock_guard<std::mutex> lock(state->mu);
         ++state->flush_count;
     }
