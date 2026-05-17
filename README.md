@@ -46,8 +46,7 @@ $ cmake -DCMAKE_CXX_FLAGS="-DSPDLITE_USE_STD_FORMAT" ..
 ## Formatter options
 
 The default header is `[YYYY-MM-DD HH:MM:SS.mmm] [name] [LVL] payload`. Reconfigure
-it at runtime via `format_options` - the cached header is rebuilt once and the
-hot path remains "patch a few bytes + memcpy":
+via `format_options`:
 
 ```c++
 log.format_options({.utc = true});
