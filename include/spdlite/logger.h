@@ -111,6 +111,11 @@ public:
         formatter_ = simple_formatter{name_, opts};
     }
 
+    void logger_name(string_view_t name) {
+        name_ = name;
+        formatter_.set_logger_name(name);
+    }
+
     void flush() const noexcept {
         std::lock_guard<Mutex> lock(mutex_);
         std::apply([](auto&... s) { (s.flush(), ...); }, sinks_);
