@@ -103,7 +103,7 @@ public:
     [[nodiscard]] level get_log_level() const noexcept { return level_.load(std::memory_order_relaxed); }
     void set_flush_level(level lvl) noexcept { flush_level_.store(lvl, std::memory_order_relaxed); }
     [[nodiscard]] level get_flush_level() const noexcept { return flush_level_.load(std::memory_order_relaxed); }
-    [[nodiscard]] const std::string& get_name() const noexcept { return name_; }
+    [[nodiscard]] string_view_t get_name() const noexcept { return name_; }
     void set_name(string_view_t new_name) {
         std::lock_guard<Mutex> lock(mutex_);
         name_.assign(new_name);
