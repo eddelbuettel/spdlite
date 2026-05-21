@@ -14,6 +14,7 @@ void file_sink_example();
 void rotating_file_sink_example();
 void multi_sink_example();
 void shared_file_sink_example();
+void set_logger(spdlite::logger_st<spdlite::console_sink>* logger);
 
 int main() {
     banner();
@@ -46,7 +47,7 @@ void banner() {
 void log_levels() {
     using namespace spdlite;
     logger_st console(console_sink{});
-    console.log_level(level::trace);
+    console.set_log_level(level::trace);
 
     console.trace("This is a {} message", "trace");
     console.debug("This is a {} message", "debug");
@@ -62,21 +63,12 @@ void format_options_example() {
     using namespace spdlite;
     logger_st log(console_sink{});
 
-    log.logger_name("format_options");
-    log.info("This is a default {} message using a named logger", "info");
-    log.format_options({.utc = true});
-    log.info("This is a {} message in utc", "info");
-    log.format_options({.show_date = false});
-    log.info("This is a {} message without date", "info");
-    log.format_options({.precision = time_precision::ns});
-    log.info("This is a {} message in nanoseconds", "info");
-    log.format_options({.precision = time_precision::none});
-    log.info("This is a {} message without subseconds", "info");
-    log.format_options({.show_thread_id = true});
-    log.info("This is a {} message showing a thread id", "info");
-    log.format_options({.show_date = false, .precision = time_precision::none});
-    log.info("This is a minimal {} message", "info");
-
+    log.set_format_options({.utc = true});
+    log.set_format_options({.show_date = false});
+    log.set_format_options({.precision = time_precision::ns});
+    log.set_format_options({.precision = time_precision::none});
+    log.set_format_options({.show_thread_id = true});
+    log.set_format_options({.show_date = false, .precision = time_precision::none});
 }
 
 // Log to a file via file_sink. The sink creates parent directories
