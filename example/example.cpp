@@ -62,7 +62,7 @@ void format_options_example() {
     using namespace spdlite;
     logger_st log(console_sink{});
 
-    log.logger_name("format_options");
+    log.name("format_options");
     log.info("This is a default {} message using a named logger", "info");
     log.format_options({.utc = true});
     log.info("This is a {} message in utc", "info");
