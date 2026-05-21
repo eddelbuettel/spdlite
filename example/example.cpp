@@ -14,6 +14,7 @@ void file_sink_example();
 void rotating_file_sink_example();
 void multi_sink_example();
 void shared_file_sink_example();
+void compile_time_gating_example();
 void set_logger(spdlite::logger_st<spdlite::console_sink>* logger);
 
 int main() {
@@ -24,6 +25,7 @@ int main() {
     rotating_file_sink_example();
     multi_sink_example();
     shared_file_sink_example();
+    compile_time_gating_example();
     return 0;
 }
 
@@ -110,4 +112,15 @@ void shared_file_sink_example() {
 
     network.info("connection established");
     auth.warn("invalid token");
+}
+
+// Compile-time level gating: build with -DSPDLITE_ACTIVE_LEVEL=SPDLITE_LEVEL_INFO
+// and the SPDLITE_DEBUG call below disappears entirely (no format string in the
+// binary, no argument evaluation). The SPDLITE_INFO call survives and is gated
+// only by the runtime log_level.
+void compile_time_gating_example() {
+    using namespace spdlite;
+    logger_st console(console_sink{});
+    SPDLITE_DEBUG(console, "debug message — visible at LEVEL_TRACE/DEBUG, elided at LEVEL_INFO+");
+    SPDLITE_INFO(console, "info message — always compiled in unless built at LEVEL_WARN or higher");
 }
