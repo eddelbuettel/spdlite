@@ -225,3 +225,60 @@ public:
 };
 
 }  // namespace spdlite
+
+// ===== Compile-time level gate =====
+// Numeric values match enum class level (trace=0 ... off=6) in common.h.
+// Set SPDLITE_ACTIVE_LEVEL before including this header to strip lower levels
+// at compile time. Default is SPDLITE_LEVEL_TRACE — no elision.
+
+#define SPDLITE_LEVEL_TRACE 0
+#define SPDLITE_LEVEL_DEBUG 1
+#define SPDLITE_LEVEL_INFO 2
+#define SPDLITE_LEVEL_WARN 3
+#define SPDLITE_LEVEL_ERROR 4
+#define SPDLITE_LEVEL_CRITICAL 5
+#define SPDLITE_LEVEL_OFF 6  // sentinel: set SPDLITE_ACTIVE_LEVEL to this to silence every macro
+
+// SPDLITE_ACTIVE_LEVEL may be set by the user (typically via -D or via a
+// #define before this header is included) to either a raw integer 0..6 or
+// to one of the SPDLITE_LEVEL_* constants defined above. The latter works
+// because the preprocessor expands the macro lazily at each #if below.
+#ifndef SPDLITE_ACTIVE_LEVEL
+    #define SPDLITE_ACTIVE_LEVEL SPDLITE_LEVEL_TRACE
+#endif
+
+#if SPDLITE_ACTIVE_LEVEL <= SPDLITE_LEVEL_TRACE
+    #define SPDLITE_TRACE(log, ...) (log).trace(__VA_ARGS__)
+#else
+    #define SPDLITE_TRACE(log, ...) (void)0
+#endif
+
+#if SPDLITE_ACTIVE_LEVEL <= SPDLITE_LEVEL_DEBUG
+    #define SPDLITE_DEBUG(log, ...) (log).debug(__VA_ARGS__)
+#else
+    #define SPDLITE_DEBUG(log, ...) (void)0
+#endif
+
+#if SPDLITE_ACTIVE_LEVEL <= SPDLITE_LEVEL_INFO
+    #define SPDLITE_INFO(log, ...) (log).info(__VA_ARGS__)
+#else
+    #define SPDLITE_INFO(log, ...) (void)0
+#endif
+
+#if SPDLITE_ACTIVE_LEVEL <= SPDLITE_LEVEL_WARN
+    #define SPDLITE_WARN(log, ...) (log).warn(__VA_ARGS__)
+#else
+    #define SPDLITE_WARN(log, ...) (void)0
+#endif
+
+#if SPDLITE_ACTIVE_LEVEL <= SPDLITE_LEVEL_ERROR
+    #define SPDLITE_ERROR(log, ...) (log).error(__VA_ARGS__)
+#else
+    #define SPDLITE_ERROR(log, ...) (void)0
+#endif
+
+#if SPDLITE_ACTIVE_LEVEL <= SPDLITE_LEVEL_CRITICAL
+    #define SPDLITE_CRITICAL(log, ...) (log).critical(__VA_ARGS__)
+#else
+    #define SPDLITE_CRITICAL(log, ...) (void)0
+#endif
