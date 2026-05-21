@@ -24,7 +24,8 @@ add_executable(spdlite_tests
     test_null_sink.cpp
     test_shared_sink.cpp
     test_thread_safety.cpp
-    test_log_macros_warn.cpp)
+    test_log_macros_warn.cpp
+    test_log_macros_trace.cpp)
 
 target_link_libraries(spdlite_tests PRIVATE spdlite doctest::doctest_with_main)
 target_include_directories(spdlite_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
