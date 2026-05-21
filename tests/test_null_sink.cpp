@@ -11,7 +11,7 @@ TEST_CASE("null_sink satisfies the log_sink concept") { CHECK(log_sink<null_sink
 
 TEST_CASE("null_sink absorbs writes and flushes without throwing") {
     logger_st<null_sink> log{"n", null_sink{}};
-    log.log_level(level::trace);
+    log.set_log_level(level::trace);
     CHECK_NOTHROW(log.trace("t {}", 1));
     CHECK_NOTHROW(log.critical("c"));
     CHECK_NOTHROW(log.flush());

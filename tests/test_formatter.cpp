@@ -10,6 +10,7 @@
 #include "spdlite/formatter.h"
 
 using namespace spdlite;
+using namespace spdlite::detail;
 using namespace std::chrono;
 using helpers::contains;
 

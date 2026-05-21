@@ -29,7 +29,7 @@
 
 static void spdlite_disabled(benchmark::State& state) {
     spdlite::logger_st<spdlite::null_sink> log("bench", spdlite::null_sink{});
-    log.log_level(spdlite::level::off);
+    log.set_log_level(spdlite::level::off);
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);

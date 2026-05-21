@@ -16,7 +16,7 @@ TEST_CASE("named ctor sets the logger name and embeds it in the header") {
     capture_sink cap;
     logger_st<capture_sink> log{"my_logger", cap};
 
-    CHECK(log.name() == "my_logger");
+    CHECK(log.get_name() == "my_logger");
     log.info("hello");
     REQUIRE(cap.state->formatted.size() == 1);
     CHECK(contains(cap.state->formatted[0], "[my_logger]"));
@@ -26,7 +26,7 @@ TEST_CASE("sinks-only ctor produces an empty name and no name bracket in the hea
     capture_sink cap;
     logger_st<capture_sink> log{cap};
 
-    CHECK(log.name().empty());
+    CHECK(log.get_name().empty());
     log.info("hello");
     REQUIRE(cap.state->formatted.size() == 1);
     // header shape with no name: "[ts] [INF] hello\n" - level tag butts up against payload
@@ -35,25 +35,25 @@ TEST_CASE("sinks-only ctor produces an empty name and no name bracket in the hea
 
 TEST_CASE("log_level get/set round trips") {
     logger_st<null_sink> log{"x", null_sink{}};
-    CHECK(log.log_level() == level::info);  // default
+    CHECK(log.get_log_level() == level::info);  // default
     constexpr level all[] = {level::trace, level::debug, level::info, level::warn, level::err, level::critical, level::off};
     for (auto lvl : all) {
-        log.log_level(lvl);
-        CHECK(log.log_level() == lvl);
+        log.set_log_level(lvl);
+        CHECK(log.get_log_level() == lvl);
     }
 }
 
 TEST_CASE("flush_level get/set round trips; default is off (no auto-flush)") {
     logger_st<null_sink> log{"x", null_sink{}};
-    CHECK(log.flush_level() == level::off);
+    CHECK(log.get_flush_level() == level::off);
     // off => never auto-flush in practice (callers never log at level::off)
     CHECK(log.should_flush(level::trace) == false);
     CHECK(log.should_flush(level::critical) == false);
 
     constexpr level all[] = {level::trace, level::debug, level::info, level::warn, level::err, level::critical, level::off};
     for (auto fl : all) {
-        log.flush_level(fl);
-        CHECK(log.flush_level() == fl);
+        log.set_flush_level(fl);
+        CHECK(log.get_flush_level() == fl);
         for (auto msg : all) {
             const bool expected = static_cast<int>(msg) >= static_cast<int>(fl);
             CHECK(log.should_flush(msg) == expected);
@@ -64,7 +64,7 @@ TEST_CASE("flush_level get/set round trips; default is off (no auto-flush)") {
 TEST_CASE("auto-flush triggers when message level >= flush_level") {
     capture_sink cap;
     logger_st<capture_sink> log{"x", cap};
-    log.flush_level(level::err);
+    log.set_flush_level(level::err);
 
     log.info("hi");  // below threshold, no flush
     CHECK(cap.state->flush_count == 0);
@@ -121,7 +121,7 @@ TEST_CASE("fmt-string overload formats arguments") {
 TEST_CASE("per-level convenience methods set the correct level") {
     capture_sink cap;
     logger_st<capture_sink> log{"x", cap};
-    log.log_level(level::trace);
+    log.set_log_level(level::trace);
 
     log.trace("t");
     log.debug("d");
@@ -151,7 +151,7 @@ TEST_CASE("logger never throws to caller when a sink throws on write") {
     capture_sink cap;
     cap.fail_writes(true);
     logger_st<capture_sink> log{"x", cap};
-    log.log_level(level::trace);  // exercise every level path
+    log.set_log_level(level::trace);  // exercise every level path
 
     // Every entrypoint must swallow the sink's exception. Logger writes a line to
     // stderr per caught exception - expected noise during this test.
@@ -178,7 +178,7 @@ TEST_CASE("format_options() reconfigures the header in place") {
     logger_st<capture_sink> log{"app", cap};
 
     log.info("first");  // default shape
-    log.format_options({.utc = true, .show_date = false, .precision = time_precision::none});
+    log.set_format_options({.utc = true, .show_date = false, .precision = time_precision::none});
     log.info("second");  // new shape
 
     REQUIRE(cap.state->formatted.size() == 2);
@@ -200,8 +200,8 @@ TEST_CASE("log_msg.level_offset always points at the level tag, for any format_o
     auto check = [](format_options opts, level lvl, std::string_view tag, std::string_view name) {
         capture_sink cap;
         logger_st<capture_sink> log{std::string{name}, cap};
-        log.format_options(opts);
-        log.log_level(level::trace);
+        log.set_format_options(opts);
+        log.set_log_level(level::trace);
         log.log(lvl, "x");
         REQUIRE(cap.state->formatted.size() == 1);
         const auto& line = cap.state->formatted[0];

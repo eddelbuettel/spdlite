@@ -99,19 +99,19 @@ public:
         return msg_level >= flush_level_.load(std::memory_order_relaxed);
     }
 
-    void log_level(level lvl) noexcept { level_.store(lvl, std::memory_order_relaxed); }
-    [[nodiscard]] level log_level() const noexcept { return level_.load(std::memory_order_relaxed); }
-    void flush_level(level lvl) noexcept { flush_level_.store(lvl, std::memory_order_relaxed); }
-    [[nodiscard]] level flush_level() const noexcept { return flush_level_.load(std::memory_order_relaxed); }
-    [[nodiscard]] const std::string& name() const noexcept { return name_; }
-    void name(const string_view& name) {
+    void set_log_level(level lvl) noexcept { level_.store(lvl, std::memory_order_relaxed); }
+    [[nodiscard]] level get_log_level() const noexcept { return level_.load(std::memory_order_relaxed); }
+    void set_flush_level(level lvl) noexcept { flush_level_.store(lvl, std::memory_order_relaxed); }
+    [[nodiscard]] level get_flush_level() const noexcept { return flush_level_.load(std::memory_order_relaxed); }
+    [[nodiscard]] const std::string& get_name() const noexcept { return name_; }
+    void set_name(string_view_t new_name) {
         std::lock_guard<Mutex> lock(mutex_);
-        name_ = name;
-        formatter_.set_logger_name(name);
+        name_.assign(new_name);
+        formatter_.set_logger_name(name_);
     }
 
     // Reconfigure the cached header (UTC, show_date, show_millis). Cheap - one ctor call.
-    void format_options(format_options opts) {
+    void set_format_options(format_options opts) {
         std::lock_guard<Mutex> lock(mutex_);
         formatter_ = simple_formatter{name_, opts};
     }

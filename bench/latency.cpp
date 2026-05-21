@@ -55,7 +55,7 @@ static void bench_null_sink_formatted(benchmark::State& state) {
 // Bench with logger disabled at runtime
 static void bench_disabled_runtime(benchmark::State& state) {
     logger_st<null_sink> log("bench", null_sink{});
-    log.log_level(level::off);
+    log.set_log_level(level::off);
     int i = 0;
     for (auto _ : state) {
         log.info("Hello logger: msg number {}...............", ++i);
