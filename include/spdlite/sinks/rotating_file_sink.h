@@ -38,6 +38,9 @@ struct rotating_file_sink {
         : base_filename_(std::move(base_filename)),
           max_size_(max_size),
           max_files_(max_files) {
+        if (base_filename_.empty()) {
+            throw std::invalid_argument("rotating_file_sink: base_filename must not be empty");
+        }
         if (max_size == 0) {
             throw std::invalid_argument("rotating_file_sink: max_size must be > 0");
         }
@@ -63,7 +66,7 @@ struct rotating_file_sink {
         open_(false);
     }
 
-    void write(const log_msg &msg) {
+    void write(const log_msg& msg) {
         if (!file_) return;  // degraded state after a failed rotation - drop silently
         const auto bytes = msg.formatted.size();
         auto new_size = current_size_ + bytes;
@@ -102,9 +105,9 @@ private:
 
     void open_(bool truncate) {
 #ifdef _WIN32
-        std::FILE *fp = _wfopen(base_filename_.c_str(), truncate ? L"wb" : L"ab");
+        std::FILE* fp = _wfopen(base_filename_.c_str(), truncate ? L"wb" : L"ab");
 #else
-        std::FILE *fp = std::fopen(base_filename_.c_str(), truncate ? "wb" : "ab");
+        std::FILE* fp = std::fopen(base_filename_.c_str(), truncate ? "wb" : "ab");
 #endif
         if (!fp) {
             throw std::runtime_error("spdlite: failed to open file: " + base_filename_.string());
@@ -137,7 +140,7 @@ private:
     // rename src->dst with retries after a short sleep. workaround for the
     // windows issue where antivirus / indexer can briefly hold the file and
     // cause rename to fail with permission denied at high rotation rates.
-    static bool try_rename_(const std::filesystem::path &src, const std::filesystem::path &dst) {
+    static bool try_rename_(const std::filesystem::path& src, const std::filesystem::path& dst) {
         constexpr int max_attempts = 5;
         constexpr auto retry_delay = std::chrono::milliseconds(20);
         std::error_code ec;
@@ -163,9 +166,10 @@ private:
 
         // first pass: find the highest index
         std::size_t highest = 0;
-        for (const auto &entry : std::filesystem::directory_iterator(parent, ec)) {
+        for (const auto& entry : std::filesystem::directory_iterator(parent, ec)) {
             if (ec) break;
             std::error_code stat_ec;
+            if (entry.is_symlink(stat_ec)) continue;  // never follow planted symlinks
             if (!entry.is_regular_file(stat_ec)) continue;
             const auto n = parse_archive_index_(entry.path().filename(), stem, ext);
             if (n && *n > highest) highest = *n;
@@ -175,9 +179,10 @@ private:
         // second pass: delete anything below the keep window (best-effort)
         if (highest > max_files_) {
             const std::size_t lowest_keep = highest - max_files_ + 1;
-            for (const auto &entry : std::filesystem::directory_iterator(parent, ec)) {
+            for (const auto& entry : std::filesystem::directory_iterator(parent, ec)) {
                 if (ec) break;
                 std::error_code stat_ec;
+                if (entry.is_symlink(stat_ec)) continue;
                 if (!entry.is_regular_file(stat_ec)) continue;
                 const auto n = parse_archive_index_(entry.path().filename(), stem, ext);
                 if (n && *n < lowest_keep) std::filesystem::remove(entry.path(), ec);
@@ -187,9 +192,9 @@ private:
     }
 
     // matches `<base_stem>.<digits><base_ext>`; returns the index if so.
-    static std::optional<std::size_t> parse_archive_index_(const std::filesystem::path &filepath,
-                                                           const std::filesystem::path &base_stem,
-                                                           const std::filesystem::path &base_ext) {
+    static std::optional<std::size_t> parse_archive_index_(const std::filesystem::path& filepath,
+                                                           const std::filesystem::path& base_stem,
+                                                           const std::filesystem::path& base_ext) {
         // if base has an extension, file's must match exactly. if base has no extension,
         // the file's ".<digits>" tail is its only "extension" and is parsed below.
         if (!base_ext.empty() && filepath.extension() != base_ext) return std::nullopt;
@@ -197,10 +202,10 @@ private:
         // "app.5.txt"  -> inner is "app.5";
         // "app.5" with -> inner is "app.5" too. inner's stem must equal base_stem;
         // inner's extension is the ".<digits>" tail.
-        const auto &inner = base_ext.empty() ? filepath : filepath.stem();
+        const auto& inner = base_ext.empty() ? filepath : filepath.stem();
         if (inner.stem() != base_stem) return std::nullopt;
-        const auto &dot_digits = inner.extension();        // prvalue path, lifetime-extended
-        const auto &dot_digits_str = dot_digits.native();  // const string_type& — no allocation
+        const auto& dot_digits = inner.extension();        // prvalue path, lifetime-extended
+        const auto& dot_digits_str = dot_digits.native();  // const string_type& — no allocation
         if (dot_digits_str.size() < 2 || dot_digits_str[0] != '.') return std::nullopt;
 
         std::size_t value = 0;
