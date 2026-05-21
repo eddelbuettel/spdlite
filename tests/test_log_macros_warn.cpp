@@ -1,13 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-// At LEVEL_WARN, TRACE/DEBUG/INFO must elide (zero arg evaluation),
-// WARN/ERROR/CRITICAL must emit. This is the boundary correctness witness.
-
-// SPDLITE_LEVEL_WARN is defined inside logger.h. This works because the
-// preprocessor expands SPDLITE_ACTIVE_LEVEL lazily — its replacement text
-// is only evaluated at the #if comparisons inside logger.h, which run
-// after the SPDLITE_LEVEL_* constants are defined there.
-#define SPDLITE_ACTIVE_LEVEL SPDLITE_LEVEL_WARN
+// LEVEL_WARN: TRACE/DEBUG/INFO elide; WARN/ERROR/CRITICAL emit. Boundary witness.
+#define SPDLITE_ACTIVE_LEVEL SPDLITE_LEVEL_WARN  // lazily expanded inside logger.h
 
 #include <doctest/doctest.h>
 

@@ -114,10 +114,8 @@ void shared_file_sink_example() {
     auth.warn("invalid token");
 }
 
-// Compile-time level gating: build with -DSPDLITE_ACTIVE_LEVEL=SPDLITE_LEVEL_INFO
-// and the SPDLITE_DEBUG call below disappears entirely (no format string in the
-// binary, no argument evaluation). The SPDLITE_INFO call survives and is gated
-// only by the runtime log_level.
+// Compile-time level gating. Build with -DSPDLITE_ACTIVE_LEVEL=SPDLITE_LEVEL_INFO
+// to strip the SPDLITE_DEBUG call entirely (no format string, no arg eval).
 void compile_time_gating_example() {
     using namespace spdlite;
     logger_st console(console_sink{});

@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-// At LEVEL_OFF, all six macros must elide entirely — zero arg evaluation,
-// zero messages reaching the sink.
-
-// SPDLITE_LEVEL_OFF is defined inside logger.h. Lazy preprocessor expansion
-// makes this work — see test_log_macros_warn.cpp for the explanation.
-#define SPDLITE_ACTIVE_LEVEL SPDLITE_LEVEL_OFF
+// LEVEL_OFF: all six macros elide — zero arg evaluation, nothing reaches the sink.
+#define SPDLITE_ACTIVE_LEVEL SPDLITE_LEVEL_OFF  // lazily expanded inside logger.h
 
 #include <doctest/doctest.h>
 
