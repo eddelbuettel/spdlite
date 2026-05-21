@@ -47,7 +47,7 @@ endif()
 
 # Example
 if(SPDLITE_BUILD_EXAMPLE)
-    include(example)
+    add_subdirectory(example)
 endif()
 
 # Caller-zoo: synthetic stress for measuring per-callsite cost (binary size, compile time).
