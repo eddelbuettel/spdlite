@@ -10,7 +10,6 @@
 
 // Platform thread-ID source for the optional [tid] header field.
 #if defined(__linux__)
-    #include <sys/syscall.h>
     #include <unistd.h>
 #elif defined(__APPLE__)
     #include <pthread.h>
@@ -23,9 +22,7 @@ extern "C" __declspec(dllimport) unsigned long __stdcall GetCurrentThreadId(void
 
 #include "common.h"
 
-namespace spdlite {
-
-namespace detail {
+namespace spdlite::detail {
 
 // Cached per-thread ID, already capped to 6 decimal digits to match the fixed
 // header field width. Hot-path cost: one thread_local load.
@@ -45,8 +42,6 @@ inline std::uint32_t this_thread_id_log() noexcept {
     }();
     return cached;
 }
-
-}  // namespace detail
 
 inline void put2(char* dst, int n) {
     dst[0] = static_cast<char>('0' + n / 10);
@@ -78,6 +73,10 @@ inline void put9(char* dst, std::uint64_t n) {
     put3(dst + 3, static_cast<int>((n / 1000) % 1000));
     put3(dst + 6, static_cast<int>(n % 1000));
 }
+
+}  // namespace spdlite::detail
+
+namespace spdlite {
 
 // Fractional-second resolution for the timestamp. none = no ".xxx" suffix at all.
 enum class time_precision { none, ms, us, ns };
@@ -118,20 +117,20 @@ struct simple_formatter {
             const auto frac_ns = (duration_cast<nanoseconds>(time_since_epoch) - duration_cast<nanoseconds>(secs)).count();
             switch (opts_.precision) {
                 case time_precision::ms:
-                    put3(header_.data() + frac_offset_, static_cast<int>(frac_ns / 1'000'000));
+                    detail::put3(header_.data() + frac_offset_, static_cast<int>(frac_ns / 1'000'000));
                     break;
                 case time_precision::us:
-                    put6(header_.data() + frac_offset_, static_cast<std::uint64_t>(frac_ns / 1'000));
+                    detail::put6(header_.data() + frac_offset_, static_cast<std::uint64_t>(frac_ns / 1'000));
                     break;
                 case time_precision::ns:
-                    put9(header_.data() + frac_offset_, static_cast<std::uint64_t>(frac_ns));
+                    detail::put9(header_.data() + frac_offset_, static_cast<std::uint64_t>(frac_ns));
                     break;
                 case time_precision::none:
                     break;
             }
         }
         if (opts_.show_thread_id) {
-            put6(header_.data() + tid_offset_, detail::this_thread_id_log());
+            detail::put6(header_.data() + tid_offset_, detail::this_thread_id_log());
         }
         std::memcpy(header_.data() + level_offset_, to_string_view(lvl).data(), level_width);
         dest.append(header_.data(), header_.data() + header_.size());
@@ -201,14 +200,14 @@ private:
 #endif
         std::size_t off = 1;  // skip leading '['
         if (opts_.show_date) {
-            put4(header_.data() + off, tm.tm_year + 1900);
-            put2(header_.data() + off + 5, tm.tm_mon + 1);
-            put2(header_.data() + off + 8, tm.tm_mday);
+            detail::put4(header_.data() + off, tm.tm_year + 1900);
+            detail::put2(header_.data() + off + 5, tm.tm_mon + 1);
+            detail::put2(header_.data() + off + 8, tm.tm_mday);
             off += 11;  // skip past "YYYY-MM-DD "
         }
-        put2(header_.data() + off, tm.tm_hour);
-        put2(header_.data() + off + 3, tm.tm_min);
-        put2(header_.data() + off + 6, tm.tm_sec);
+        detail::put2(header_.data() + off, tm.tm_hour);
+        detail::put2(header_.data() + off + 3, tm.tm_min);
+        detail::put2(header_.data() + off + 6, tm.tm_sec);
         // punctuation ('-', ':', '.', ']', ' ', '[') is invariant; set once by rebuild_header
     }
 };

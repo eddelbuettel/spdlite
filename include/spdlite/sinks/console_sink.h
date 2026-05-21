@@ -29,80 +29,19 @@ enum class color_mode { automatic, always, never };
     #endif
     #include <windows.h>
 
-namespace spdlite {
-
-namespace detail {
+namespace spdlite::detail {
 
 // uses SetConsoleTextAttribute + WriteConsoleA for colored output.
 // falls back to WriteFile when output is redirected to a file or color_mode is off.
 struct color_sink_base {
-    explicit color_sink_base(HANDLE handle, color_mode mode = color_mode::automatic)
-        : handle_(handle),
-          mode_(mode) {
-        // detect if we're writing to a real console
-        DWORD console_mode = 0;
-        is_console_ = ::GetConsoleMode(handle_, &console_mode) != 0;
-
-        // save original attributes for reset
-        CONSOLE_SCREEN_BUFFER_INFO info{};
-        if (is_console_ && ::GetConsoleScreenBufferInfo(handle_, &info)) {
-            orig_attribs_ = info.wAttributes;
-        }
-
-        colors_[static_cast<std::size_t>(level::trace)] = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
-        colors_[static_cast<std::size_t>(level::debug)] = FOREGROUND_GREEN | FOREGROUND_BLUE;
-        colors_[static_cast<std::size_t>(level::info)] = FOREGROUND_GREEN;
-        colors_[static_cast<std::size_t>(level::warn)] = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
-        colors_[static_cast<std::size_t>(level::err)] = FOREGROUND_RED | FOREGROUND_INTENSITY;
-        colors_[static_cast<std::size_t>(level::critical)] =
-            BACKGROUND_RED | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
-        colors_[static_cast<std::size_t>(level::off)] = 0;
-
-        update_should_color_();
-    }
+    explicit color_sink_base(HANDLE handle, color_mode mode = color_mode::automatic);
 
     void set_color_mode(color_mode mode) noexcept {
         mode_ = mode;
         update_should_color_();
     }
 
-    void write(const log_msg &msg) {
-        if (handle_ == nullptr || handle_ == INVALID_HANDLE_VALUE) return;
-
-        const char *data = msg.formatted.data();
-        auto size = msg.formatted.size();
-
-        // plain path - either color_mode::never, or automatic+redirected
-        if (!should_color_) {
-            if (is_console_)
-                write_console_(data, size);
-            else {
-                DWORD written = 0;
-                ::WriteFile(handle_, data, static_cast<DWORD>(size), &written, nullptr);
-            }
-            return;
-        }
-
-        // SetConsoleTextAttribute only works against a real console; if the user
-        // forced color_mode::always and output is redirected, drop back to plain.
-        if (!is_console_) {
-            DWORD written = 0;
-            ::WriteFile(handle_, data, static_cast<DWORD>(size), &written, nullptr);
-            return;
-        }
-
-        const auto level_start = msg.level_offset;
-        const auto level_end = level_start + level_width;
-
-        // before level tag
-        write_console_(data, level_start);
-        // colored level tag
-        ::SetConsoleTextAttribute(handle_, colors_[static_cast<std::size_t>(msg.log_level)]);
-        write_console_(data + level_start, level_width);
-        // reset and remainder
-        ::SetConsoleTextAttribute(handle_, orig_attribs_);
-        write_console_(data + level_end, size - level_end);
-    }
+    void write(const log_msg& msg);
 
     void flush() {}  // windows console is unbuffered
 
@@ -130,7 +69,7 @@ private:
         }
     }
 
-    void write_console_(const char *data, std::size_t size) {
+    void write_console_(const char* data, std::size_t size) {
         if (size > 0) {
             DWORD written = 0;
             ::WriteConsoleA(handle_, data, static_cast<DWORD>(size), &written, nullptr);
@@ -138,7 +77,72 @@ private:
     }
 };
 
-}  // namespace detail
+inline color_sink_base::color_sink_base(HANDLE handle, color_mode mode)
+    : handle_(handle),
+      mode_(mode) {
+    // detect if we're writing to a real console
+    DWORD console_mode = 0;
+    is_console_ = ::GetConsoleMode(handle_, &console_mode) != 0;
+
+    // save original attributes for reset
+    CONSOLE_SCREEN_BUFFER_INFO info{};
+    if (is_console_ && ::GetConsoleScreenBufferInfo(handle_, &info)) {
+        orig_attribs_ = info.wAttributes;
+    }
+
+    colors_[static_cast<std::size_t>(level::trace)] = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+    colors_[static_cast<std::size_t>(level::debug)] = FOREGROUND_GREEN | FOREGROUND_BLUE;
+    colors_[static_cast<std::size_t>(level::info)] = FOREGROUND_GREEN;
+    colors_[static_cast<std::size_t>(level::warn)] = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+    colors_[static_cast<std::size_t>(level::err)] = FOREGROUND_RED | FOREGROUND_INTENSITY;
+    colors_[static_cast<std::size_t>(level::critical)] =
+        BACKGROUND_RED | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+    colors_[static_cast<std::size_t>(level::off)] = 0;
+
+    update_should_color_();
+}
+
+inline void color_sink_base::write(const log_msg& msg) {
+    if (handle_ == nullptr || handle_ == INVALID_HANDLE_VALUE) return;
+
+    const char* data = msg.formatted.data();
+    auto size = msg.formatted.size();
+
+    // plain path - either color_mode::never, or automatic+redirected
+    if (!should_color_) {
+        if (is_console_)
+            write_console_(data, size);
+        else {
+            DWORD written = 0;
+            ::WriteFile(handle_, data, static_cast<DWORD>(size), &written, nullptr);
+        }
+        return;
+    }
+
+    // SetConsoleTextAttribute only works against a real console; if the user
+    // forced color_mode::always and output is redirected, drop back to plain.
+    if (!is_console_) {
+        DWORD written = 0;
+        ::WriteFile(handle_, data, static_cast<DWORD>(size), &written, nullptr);
+        return;
+    }
+
+    const auto level_start = msg.level_offset;
+    const auto level_end = level_start + level_width;
+
+    // before level tag
+    write_console_(data, level_start);
+    // colored level tag
+    ::SetConsoleTextAttribute(handle_, colors_[static_cast<std::size_t>(msg.log_level)]);
+    write_console_(data + level_start, level_width);
+    // reset and remainder
+    ::SetConsoleTextAttribute(handle_, orig_attribs_);
+    write_console_(data + level_end, size - level_end);
+}
+
+}  // namespace spdlite::detail
+
+namespace spdlite {
 
 struct console_sink : detail::color_sink_base {
     explicit console_sink(color_mode mode = color_mode::automatic)
@@ -161,7 +165,7 @@ struct console_err_sink : detail::color_sink_base {
     #include <cstdio>
     #include <string_view>
 
-namespace spdlite {
+namespace spdlite::detail {
 
 namespace ansi_color {
 constexpr std::string_view reset = "\033[m";
@@ -173,59 +177,24 @@ constexpr std::string_view red_bold = "\033[31m\033[1m";
 constexpr std::string_view bold_on_red = "\033[1m\033[41m";
 }  // namespace ansi_color
 
-namespace detail {
-
 // wraps ANSI escape codes around the level tag (level_width chars) in the formatted output.
 // rebuilds the line into cbuf_ with: [prefix][color][LVL][reset][rest].
 struct color_sink_base {
-    explicit color_sink_base(std::FILE *file, color_mode mode = color_mode::automatic)
-        : file_(file),
-          mode_(mode) {
-        colors_[static_cast<std::size_t>(level::trace)] = ansi_color::white;
-        colors_[static_cast<std::size_t>(level::debug)] = ansi_color::cyan;
-        colors_[static_cast<std::size_t>(level::info)] = ansi_color::green;
-        colors_[static_cast<std::size_t>(level::warn)] = ansi_color::yellow_bold;
-        colors_[static_cast<std::size_t>(level::err)] = ansi_color::red_bold;
-        colors_[static_cast<std::size_t>(level::critical)] = ansi_color::bold_on_red;
-        colors_[static_cast<std::size_t>(level::off)] = ansi_color::reset;
-
-        is_tty_ = ::isatty(::fileno(file_)) != 0;
-        update_should_color_();
-    }
+    explicit color_sink_base(std::FILE* file, color_mode mode = color_mode::automatic);
 
     void set_color_mode(color_mode mode) noexcept {
         mode_ = mode;
         update_should_color_();
     }
 
-    void write(const log_msg &msg) {
-        const char *data = msg.formatted.data();
-        auto size = msg.formatted.size();
-
-        if (!should_color_) {
-            fwrite_bytes(data, size, file_);
-            return;
-        }
-
-        auto color = colors_[static_cast<std::size_t>(msg.log_level)];
-        const auto level_start = msg.level_offset;
-        const auto level_end = level_start + level_width;
-
-        cbuf_.clear();
-        cbuf_.append(data, data + level_start);
-        cbuf_.append(color.data(), color.data() + color.size());
-        cbuf_.append(data + level_start, data + level_end);
-        cbuf_.append(ansi_color::reset.data(), ansi_color::reset.data() + ansi_color::reset.size());
-        cbuf_.append(data + level_end, data + size);
-        fwrite_bytes(cbuf_.data(), cbuf_.size(), file_);
-    }
+    void write(const log_msg& msg);
 
     void flush() const { std::fflush(file_); }
 
     void set_color(level lvl, std::string_view color) { colors_[static_cast<std::size_t>(lvl)] = color; }
 
 private:
-    std::FILE *file_;
+    std::FILE* file_;
     color_mode mode_;
     bool is_tty_{false};
     bool should_color_{false};
@@ -247,7 +216,46 @@ private:
     }
 };
 
-}  // namespace detail
+inline color_sink_base::color_sink_base(std::FILE* file, color_mode mode)
+    : file_(file),
+      mode_(mode) {
+    colors_[static_cast<std::size_t>(level::trace)] = ansi_color::white;
+    colors_[static_cast<std::size_t>(level::debug)] = ansi_color::cyan;
+    colors_[static_cast<std::size_t>(level::info)] = ansi_color::green;
+    colors_[static_cast<std::size_t>(level::warn)] = ansi_color::yellow_bold;
+    colors_[static_cast<std::size_t>(level::err)] = ansi_color::red_bold;
+    colors_[static_cast<std::size_t>(level::critical)] = ansi_color::bold_on_red;
+    colors_[static_cast<std::size_t>(level::off)] = ansi_color::reset;
+
+    is_tty_ = ::isatty(::fileno(file_)) != 0;
+    update_should_color_();
+}
+
+inline void color_sink_base::write(const log_msg& msg) {
+    const char* data = msg.formatted.data();
+    auto size = msg.formatted.size();
+
+    if (!should_color_) {
+        detail::fwrite_bytes(data, size, file_);
+        return;
+    }
+
+    auto color = colors_[static_cast<std::size_t>(msg.log_level)];
+    const auto level_start = msg.level_offset;
+    const auto level_end = level_start + level_width;
+
+    cbuf_.clear();
+    cbuf_.append(data, data + level_start);
+    cbuf_.append(color.data(), color.data() + color.size());
+    cbuf_.append(data + level_start, data + level_end);
+    cbuf_.append(ansi_color::reset.data(), ansi_color::reset.data() + ansi_color::reset.size());
+    cbuf_.append(data + level_end, data + size);
+    detail::fwrite_bytes(cbuf_.data(), cbuf_.size(), file_);
+}
+
+}  // namespace spdlite::detail
+
+namespace spdlite {
 
 struct console_sink : detail::color_sink_base {
     explicit console_sink(color_mode mode = color_mode::automatic)

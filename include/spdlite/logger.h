@@ -124,8 +124,8 @@ public:
 
 private:
     std::string name_;
-    atomic_level_t level_{level::info};
-    atomic_level_t flush_level_{level::off};  // off => never auto-flush
+    detail::atomic_level_t level_{level::info};
+    detail::atomic_level_t flush_level_{level::off};  // off => never auto-flush
     mutable Mutex mutex_;
     mutable simple_formatter formatter_;
     mutable memory_buf_t buf_;
@@ -214,8 +214,8 @@ public:
 
 // logger_st: single-threaded (null_mutex). Zero locking overhead.
 template <typename... Sinks>
-class logger_st : public logger<null_mutex, Sinks...> {
-    using base = logger<null_mutex, Sinks...>;
+class logger_st : public logger<detail::null_mutex, Sinks...> {
+    using base = logger<detail::null_mutex, Sinks...>;
 
 public:
     logger_st() = default;

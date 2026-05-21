@@ -35,7 +35,11 @@ namespace spdlite {
 using log_clock = std::chrono::system_clock;
 using string_view_t = std::string_view;
 
+}  // namespace spdlite
+
 #ifdef SPDLITE_USE_STD_FORMAT
+
+namespace spdlite::detail {
 
 // Stack-allocated buffer with heap fallback. Used as memory_buf_t when
 // SPDLITE_USE_STD_FORMAT is defined (replacing fmt::basic_memory_buffer).
@@ -120,14 +124,19 @@ private:
     }
 };
 
-using memory_buf_t = stack_buf<250>;
+}  // namespace spdlite::detail
+
+namespace spdlite {
+using memory_buf_t = detail::stack_buf<250>;
 
 template <typename... Args>
 using format_string_t = std::format_string<Args...>;
 using format_args_t = std::format_args;
 using format_string_view_t = std::string_view;
+}  // namespace spdlite
 
 #else
+namespace spdlite {
 // when using fmt, reuse its buffer directly - same stack/heap design, no wrapper needed
 using memory_buf_t = fmt::basic_memory_buffer<char, 250>;
 
@@ -135,7 +144,10 @@ template <typename... Args>
 using format_string_t = fmt::format_string<Args...>;
 using format_args_t = fmt::format_args;
 using format_string_view_t = fmt::string_view;
+}  // namespace spdlite
 #endif
+
+namespace spdlite {
 
 enum class level : std::uint8_t { trace = 0, debug = 1, info = 2, warn = 3, err = 4, critical = 5, off = 6, n_levels = 7 };
 
@@ -151,14 +163,16 @@ constexpr std::array<std::string_view, levels_count> level_names{"TRC", "DBG", "
     return level_names[static_cast<std::size_t>(lvl)];
 }
 
-namespace detail {
+}  // namespace spdlite
+
+namespace spdlite::detail {
+
 // shared FILE* deleter for unique_ptr in file-backed sinks
 struct file_closer {
     void operator()(std::FILE* f) const noexcept {
         if (f) std::fclose(f);
     }
 };
-}  // namespace detail
 
 // non-locking fwrite - the logger already holds its own mutex, so the per-call stdio lock is redundant
 inline bool fwrite_bytes(const void* ptr, std::size_t n, std::FILE* fp) {
@@ -170,6 +184,10 @@ inline bool fwrite_bytes(const void* ptr, std::size_t n, std::FILE* fp) {
     return std::fwrite(ptr, 1, n, fp) == n;
 #endif
 }
+
+}  // namespace spdlite::detail
+
+namespace spdlite {
 
 // lightweight message descriptor passed to sinks - all views, no ownership.
 // `formatted` covers the whole line the logger produced (header + payload + newline).
@@ -199,6 +217,10 @@ struct log_msg {
           level_offset(lvl_offset) {}
 };
 
+}  // namespace spdlite
+
+namespace spdlite::detail {
+
 // logger-side helpers used by the logger template
 using atomic_level_t = std::atomic<level>;
 
@@ -208,4 +230,4 @@ struct null_mutex {
     void unlock() noexcept {}
 };
 
-}  // namespace spdlite
+}  // namespace spdlite::detail
