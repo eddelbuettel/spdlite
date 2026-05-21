@@ -175,9 +175,15 @@ int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
     std::cout.rdbuf(std::cerr.rdbuf());
 #ifdef _WIN32
-    (void)std::freopen("NUL", "w", stdout);
+    if (std::freopen("NUL", "w", stdout) == nullptr) {
+        std::cerr << "freopen failed\n";
+        return 1;
+    }
 #else
-    (void)std::freopen("/dev/null", "w", stdout);
+    if (std::freopen("/dev/null", "w", stdout) == nullptr) {
+        std::cerr << "freopen failed\n";
+        return 1;
+    }
 #endif
 
     benchmark::RunSpecifiedBenchmarks();
