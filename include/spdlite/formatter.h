@@ -92,8 +92,8 @@ struct format_options {
 // Default shape: [YYYY-MM-DD HH:MM:SS.mmm] [name] [LVL] payload\n
 // Layout flexes with format_options - the cached header is rebuilt on options change,
 // so the hot path stays "patch a few bytes + memcpy" regardless of layout.
-struct simple_formatter {
-    explicit simple_formatter(string_view_t logger_name = {}, format_options opts = {})
+struct formatter {
+    explicit formatter(string_view_t logger_name = {}, format_options opts = {})
         : opts_(opts) {
         rebuild_header(logger_name);
     }

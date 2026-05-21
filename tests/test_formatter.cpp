@@ -81,14 +81,14 @@ TEST_CASE("put9 writes a zero-padded 9-digit number") {
 }
 
 // Helper: extract the entire produced header as a string.
-static std::string format_one(simple_formatter& fmt, log_clock::time_point tp, level lvl) {
+static std::string format_one(formatter& fmt, log_clock::time_point tp, level lvl) {
     memory_buf_t buf;
     fmt.format_header(tp, lvl, buf);
     return std::string(buf.data(), buf.size());
 }
 
 TEST_CASE("format_header produces a fixed-shape header with logger name") {
-    simple_formatter fmt{"myname"};
+    formatter fmt{"myname"};
     auto out = format_one(fmt, log_clock::now(), level::info);
 
     // Layout (byte offsets): the timestamp separators are fixed, then a space at 25.
@@ -109,7 +109,7 @@ TEST_CASE("format_header produces a fixed-shape header with logger name") {
 }
 
 TEST_CASE("format_header omits the name bracket when name is empty") {
-    simple_formatter fmt{};
+    formatter fmt{};
     auto out = format_one(fmt, log_clock::now(), level::warn);
 
     // [YYYY-MM-DD HH:MM:SS.mmm] [WRN]<space>
@@ -118,7 +118,7 @@ TEST_CASE("format_header omits the name bracket when name is empty") {
 }
 
 TEST_CASE("format_header patches the level tag per call") {
-    simple_formatter fmt{};
+    formatter fmt{};
     auto tp = log_clock::now();
 
     auto a = format_one(fmt, tp, level::trace);
@@ -132,14 +132,14 @@ TEST_CASE("format_header patches the level tag per call") {
 
 TEST_CASE("level_offset points at the level character (used by color sinks)") {
     // anon header: "[YYYY-MM-DD HH:MM:SS.mmm] [" -> offset 27
-    CHECK(simple_formatter{}.level_offset() == 27);
+    CHECK(formatter{}.level_offset() == 27);
 
     // named "abc" header inserts "[abc] " before the level bracket -> offset 27 + 6 = 33
-    CHECK(simple_formatter{"abc"}.level_offset() == 33);
+    CHECK(formatter{"abc"}.level_offset() == 33);
 }
 
 TEST_CASE("set_logger_name updates the header") {
-    simple_formatter fmt{"old"};
+    formatter fmt{"old"};
     auto out1 = format_one(fmt, log_clock::now(), level::info);
     CHECK(contains(out1, "[old]"));
 
@@ -153,7 +153,7 @@ TEST_CASE("format_header patches only the millis when within the same second") {
     // Three timestamps in the same second should share the date+time portion and
     // differ only in the millis triplet at offsets 21..23. Exercises the cached-header
     // path that skips localtime() on sub-second updates.
-    simple_formatter fmt{};
+    formatter fmt{};
     auto base = log_clock::time_point{seconds{1700000000}};
     auto a = format_one(fmt, base, level::info);
     auto b = format_one(fmt, base + milliseconds{123}, level::info);
@@ -176,14 +176,14 @@ TEST_CASE("format_header patches only the millis when within the same second") {
 TEST_CASE("format_options{utc=true} uses gmtime for the timestamp") {
     // 1700000000 = 2023-11-14 22:13:20 UTC. Pin to UTC and verify exact bytes;
     // works regardless of the test runner's local timezone.
-    simple_formatter fmt{"", format_options{.utc = true}};
+    formatter fmt{"", format_options{.utc = true}};
     auto tp = log_clock::time_point{seconds{1700000000}};
     auto out = format_one(fmt, tp, level::info);
     CHECK(out.substr(1, 19) == "2023-11-14 22:13:20");
 }
 
 TEST_CASE("format_options{show_date=false} drops the YYYY-MM-DD prefix") {
-    simple_formatter fmt{"app", format_options{.show_date = false}};
+    formatter fmt{"app", format_options{.show_date = false}};
     auto out = format_one(fmt, log_clock::time_point{seconds{1700000000} + milliseconds{456}}, level::warn);
 
     // shape: [HH:MM:SS.mmm] [app] [WRN] - first char is '[', position 9 is '.', position 13 is ']'
@@ -197,7 +197,7 @@ TEST_CASE("format_options{show_date=false} drops the YYYY-MM-DD prefix") {
 }
 
 TEST_CASE("format_options{precision=none} drops the fractional suffix") {
-    simple_formatter fmt{"app", format_options{.precision = time_precision::none}};
+    formatter fmt{"app", format_options{.precision = time_precision::none}};
     auto a = format_one(fmt, log_clock::time_point{seconds{1700000000}}, level::info);
     auto b = format_one(fmt, log_clock::time_point{seconds{1700000000} + milliseconds{789}}, level::info);
 
@@ -209,7 +209,7 @@ TEST_CASE("format_options{precision=none} drops the fractional suffix") {
 }
 
 TEST_CASE("format_options{precision=us} writes 6 fractional digits") {
-    simple_formatter fmt{"", format_options{.precision = time_precision::us}};
+    formatter fmt{"", format_options{.precision = time_precision::us}};
     // 1700000000 s + 123456 µs
     auto tp = log_clock::time_point{seconds{1700000000} + microseconds{123456}};
     auto out = format_one(fmt, tp, level::info);
@@ -220,7 +220,7 @@ TEST_CASE("format_options{precision=us} writes 6 fractional digits") {
 }
 
 TEST_CASE("format_options{precision=ns} writes 9 fractional digits") {
-    simple_formatter fmt{"", format_options{.precision = time_precision::ns}};
+    formatter fmt{"", format_options{.precision = time_precision::ns}};
     // Build from microseconds so the duration converts implicitly into every
     // platform's system_clock::duration (nano on Linux glibc, 100ns on MSVC,
     // micro on macOS libc++). The trailing 3 ns digits land as 000.
@@ -233,7 +233,7 @@ TEST_CASE("format_options{precision=ns} writes 9 fractional digits") {
 }
 
 TEST_CASE("format_options{show_date=false, precision=none} produces time-only header") {
-    simple_formatter fmt{"", format_options{.show_date = false, .precision = time_precision::none}};
+    formatter fmt{"", format_options{.show_date = false, .precision = time_precision::none}};
     auto out = format_one(fmt, log_clock::time_point{seconds{1700000000}}, level::info);
     // shape: "[HH:MM:SS] [INF] " - 17 chars
     CHECK(out.size() == 17);
@@ -244,17 +244,17 @@ TEST_CASE("format_options{show_date=false, precision=none} produces time-only he
 
 TEST_CASE("level_offset() reflects the format_options layout") {
     // no date, no fractional, no name: "[HH:MM:SS] [" -> level char at offset 12
-    CHECK(simple_formatter({}, format_options{.show_date = false, .precision = time_precision::none}).level_offset() == 12);
+    CHECK(formatter({}, format_options{.show_date = false, .precision = time_precision::none}).level_offset() == 12);
     // no date, with millis, no name: "[HH:MM:SS.mmm] [" -> level char at offset 16
-    CHECK(simple_formatter({}, format_options{.show_date = false}).level_offset() == 16);
+    CHECK(formatter({}, format_options{.show_date = false}).level_offset() == 16);
     // with date, no fractional, no name: "[YYYY-MM-DD HH:MM:SS] [" -> level char at offset 23
-    CHECK(simple_formatter({}, format_options{.precision = time_precision::none}).level_offset() == 23);
+    CHECK(formatter({}, format_options{.precision = time_precision::none}).level_offset() == 23);
     // with date, ns precision, no name: "[YYYY-MM-DD HH:MM:SS.nnnnnnnnn] [" -> level char at offset 33
-    CHECK(simple_formatter({}, format_options{.precision = time_precision::ns}).level_offset() == 33);
+    CHECK(formatter({}, format_options{.precision = time_precision::ns}).level_offset() == 33);
 }
 
 TEST_CASE("format_options{show_thread_id=true} adds a 6-digit tid field after the timestamp") {
-    simple_formatter fmt{"app", format_options{.show_thread_id = true}};
+    formatter fmt{"app", format_options{.show_thread_id = true}};
     auto out = format_one(fmt, log_clock::time_point{seconds{1700000000} + milliseconds{123}}, level::info);
 
     // shape: "[YYYY-MM-DD HH:MM:SS.mmm] [tttttt] [app] [INF] "
@@ -275,7 +275,7 @@ TEST_CASE("format_options{show_thread_id=true} adds a 6-digit tid field after th
 TEST_CASE("show_thread_id is stable per thread") {
     // The tid is cached in a thread_local, so multiple calls from the same thread
     // must produce the same six digits.
-    simple_formatter fmt{"", format_options{.show_thread_id = true}};
+    formatter fmt{"", format_options{.show_thread_id = true}};
     auto base = log_clock::time_point{seconds{1700000000}};
     auto a = format_one(fmt, base, level::info);
     auto b = format_one(fmt, base + milliseconds{500}, level::warn);
@@ -285,12 +285,12 @@ TEST_CASE("show_thread_id is stable per thread") {
 
 TEST_CASE("show_thread_id shifts level_offset by 9 bytes") {
     // Adds "[tttttt] " = 9 bytes between timestamp and name/level brackets.
-    const auto base = simple_formatter{}.level_offset();
-    const auto with_tid = simple_formatter({}, format_options{.show_thread_id = true}).level_offset();
+    const auto base = formatter{}.level_offset();
+    const auto with_tid = formatter({}, format_options{.show_thread_id = true}).level_offset();
     CHECK(with_tid == base + 9);
 
     // Same shift with a logger name.
-    const auto named = simple_formatter{"app"}.level_offset();
-    const auto named_tid = simple_formatter{"app", format_options{.show_thread_id = true}}.level_offset();
+    const auto named = formatter{"app"}.level_offset();
+    const auto named_tid = formatter{"app", format_options{.show_thread_id = true}}.level_offset();
     CHECK(named_tid == named + 9);
 }

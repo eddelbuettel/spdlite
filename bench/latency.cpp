@@ -126,13 +126,13 @@ static void bench_shared_file_mt(benchmark::State& state) {
 
 // Bench just the formatter (no I/O)
 static void bench_formatter_only(benchmark::State& state) {
-    simple_formatter formatter("bench");
+    formatter fmt("bench");
     memory_buf_t buf;
     auto now = log_clock::now();
     string_view_t payload = "Hello logger: msg number 12345...............";
     for (auto _ : state) {
         buf.clear();
-        formatter.format_header(now, level::info, buf);
+        fmt.format_header(now, level::info, buf);
         buf.append(payload.data(), payload.data() + payload.size());
 #ifdef _WIN32
         buf.push_back('\r');

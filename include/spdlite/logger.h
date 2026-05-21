@@ -113,9 +113,8 @@ public:
     // Reconfigure the cached header (UTC, show_date, show_millis). Cheap - one ctor call.
     void set_format_options(format_options opts) {
         std::lock_guard<Mutex> lock(mutex_);
-        formatter_ = simple_formatter{name_, opts};
+        formatter_ = formatter{name_, opts};
     }
-
 
     void flush() const noexcept {
         std::lock_guard<Mutex> lock(mutex_);
@@ -127,7 +126,7 @@ private:
     detail::atomic_level_t level_{level::info};
     detail::atomic_level_t flush_level_{level::off};  // off => never auto-flush
     mutable Mutex mutex_;
-    mutable simple_formatter formatter_;
+    mutable formatter formatter_;
     mutable memory_buf_t buf_;
     mutable std::tuple<Sinks...> sinks_;
 

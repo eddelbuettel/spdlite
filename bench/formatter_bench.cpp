@@ -1,5 +1,5 @@
 //
-// formatter_bench.cpp - benchmark the simple_formatter in isolation
+// formatter_bench.cpp - benchmark the formatter in isolation
 //
 
 #include "benchmark/benchmark.h"
@@ -8,8 +8,7 @@
 using namespace spdlite;
 
 // appends: header + payload + \r?\n - mirrors what logger does per call
-static inline void format_line(
-    simple_formatter &fmt, memory_buf_t &dest, log_clock::time_point t, level lvl, string_view_t payload) {
+static inline void format_line(formatter& fmt, memory_buf_t& dest, log_clock::time_point t, level lvl, string_view_t payload) {
     fmt.format_header(t, lvl, dest);
     dest.append(payload.data(), payload.data() + payload.size());
 #ifdef _WIN32
@@ -19,8 +18,8 @@ static inline void format_line(
 }
 
 // Format with short payload
-static void bench_format_short(benchmark::State &state) {
-    simple_formatter fmt("mylogger");
+static void bench_format_short(benchmark::State& state) {
+    formatter fmt("mylogger");
     memory_buf_t buf;
     auto now = log_clock::now();
     for (auto _ : state) {
@@ -31,8 +30,8 @@ static void bench_format_short(benchmark::State &state) {
 }
 
 // Format with typical payload
-static void bench_format_typical(benchmark::State &state) {
-    simple_formatter fmt("mylogger");
+static void bench_format_typical(benchmark::State& state) {
+    formatter fmt("mylogger");
     memory_buf_t buf;
     auto now = log_clock::now();
     for (auto _ : state) {
@@ -43,8 +42,8 @@ static void bench_format_typical(benchmark::State &state) {
 }
 
 // Format with long payload (500 bytes)
-static void bench_format_long(benchmark::State &state) {
-    simple_formatter fmt("mylogger");
+static void bench_format_long(benchmark::State& state) {
+    formatter fmt("mylogger");
     memory_buf_t buf;
     auto now = log_clock::now();
     string_view_t payload =
@@ -61,8 +60,8 @@ static void bench_format_long(benchmark::State &state) {
 }
 
 // Just the timestamp (cached path - same second)
-static void bench_timestamp_cached(benchmark::State &state) {
-    simple_formatter fmt("x");
+static void bench_timestamp_cached(benchmark::State& state) {
+    formatter fmt("x");
     memory_buf_t buf;
     auto now = log_clock::now();
     // Warm the cache
@@ -75,8 +74,8 @@ static void bench_timestamp_cached(benchmark::State &state) {
 }
 
 // Timestamp with varying milliseconds (simulates real traffic)
-static void bench_timestamp_varying_ms(benchmark::State &state) {
-    simple_formatter fmt("x");
+static void bench_timestamp_varying_ms(benchmark::State& state) {
+    formatter fmt("x");
     memory_buf_t buf;
     int ms = 0;
     auto base = std::chrono::system_clock::now();
@@ -91,8 +90,8 @@ static void bench_timestamp_varying_ms(benchmark::State &state) {
 // Per-call hot path under each format_options combination - regression guard.
 // Stays in the cached-second path so only the per-call patcher + memcpy varies.
 template <bool Utc, bool ShowDate, time_precision Prec>
-static void bench_options_cached(benchmark::State &state) {
-    simple_formatter fmt("mylogger", format_options{.utc = Utc, .show_date = ShowDate, .precision = Prec});
+static void bench_options_cached(benchmark::State& state) {
+    formatter fmt("mylogger", format_options{.utc = Utc, .show_date = ShowDate, .precision = Prec});
     memory_buf_t buf;
     auto now = log_clock::now();
     format_line(fmt, buf, now, level::info, "warmup");  // prime the timestamp cache
@@ -106,8 +105,8 @@ static void bench_options_cached(benchmark::State &state) {
 // rebuild_timestamp path - varying millisecond crosses second boundaries occasionally
 // and exercises localtime_r/gmtime_r in the rebuild step.
 template <bool Utc, bool ShowDate, time_precision Prec>
-static void bench_options_varying(benchmark::State &state) {
-    simple_formatter fmt("mylogger", format_options{.utc = Utc, .show_date = ShowDate, .precision = Prec});
+static void bench_options_varying(benchmark::State& state) {
+    formatter fmt("mylogger", format_options{.utc = Utc, .show_date = ShowDate, .precision = Prec});
     memory_buf_t buf;
     int ms = 0;
     auto base = std::chrono::system_clock::now();
@@ -122,8 +121,8 @@ static void bench_options_varying(benchmark::State &state) {
 // thread_id path - measures the per-call cost of the show_thread_id field
 // (one thread_local load + one put6 + a longer cached-header memcpy).
 template <bool ShowTid>
-static void bench_options_thread_id(benchmark::State &state) {
-    simple_formatter fmt("mylogger", format_options{.show_thread_id = ShowTid});
+static void bench_options_thread_id(benchmark::State& state) {
+    formatter fmt("mylogger", format_options{.show_thread_id = ShowTid});
     memory_buf_t buf;
     auto now = log_clock::now();
     format_line(fmt, buf, now, level::info, "warmup");  // prime caches (timestamp + thread_local tid)
