@@ -47,9 +47,7 @@ endif()
 
 # Example
 if(SPDLITE_BUILD_EXAMPLE)
-    add_executable(example example/example.cpp ${SPDLITE_HEADERS})
-    source_group("Header Files\\spdlite" FILES ${SPDLITE_HEADERS})
-    target_link_libraries(example PRIVATE spdlite)
+    include(example)
 endif()
 
 # Caller-zoo: synthetic stress for measuring per-callsite cost (binary size, compile time).
