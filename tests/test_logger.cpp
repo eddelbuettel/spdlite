@@ -102,9 +102,9 @@ TEST_CASE("string_view overload emits the raw payload with no formatting") {
     capture_sink cap;
     logger_st<capture_sink> log{"x", cap};
 
-    // Explicit string_view_t selects the raw overload. The fmt overload would
+    // Explicit std::string_view selects the raw overload. The fmt overload would
     // reject "{}" at compile time as an unfilled placeholder.
-    string_view_t raw = "literal {} braces";
+    std::string_view raw = "literal {} braces";
     log.info(raw);
     REQUIRE(cap.state->payloads.size() == 1);
     CHECK(cap.state->payloads[0] == "literal {} braces");
@@ -162,7 +162,7 @@ TEST_CASE("logger never throws to caller when a sink throws on write") {
     CHECK_NOTHROW(log.error("e"));
     CHECK_NOTHROW(log.critical("c"));
     CHECK_NOTHROW(log.info("{} + {} = {}", 1, 2, 3));  // fmt path
-    CHECK_NOTHROW(log.info(string_view_t{"raw"}));     // string_view path
+    CHECK_NOTHROW(log.info(std::string_view{"raw"}));     // string_view path
     CHECK_NOTHROW(log.log(level::info, "via log()"));  // generic log()
     CHECK(cap.state->payloads.empty());                // nothing reached the sink
 

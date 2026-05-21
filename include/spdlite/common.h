@@ -33,7 +33,6 @@
 namespace spdlite {
 
 using log_clock = std::chrono::system_clock;
-using string_view_t = std::string_view;
 
 }  // namespace spdlite
 
@@ -195,19 +194,19 @@ namespace spdlite {
 // `level_offset` is the byte offset of the level tag inside `formatted` (for color sinks).
 struct log_msg {
     log_clock::time_point time;
-    string_view_t logger_name;
+    std::string_view logger_name;
     level log_level{level::off};
-    string_view_t formatted;
-    string_view_t payload;
+    std::string_view formatted;
+    std::string_view payload;
     std::size_t level_offset{0};
 
     log_msg() = default;
 
     log_msg(log_clock::time_point log_time,
-            string_view_t name,
+            std::string_view name,
             level lvl,
-            string_view_t line,
-            string_view_t raw,
+            std::string_view line,
+            std::string_view raw,
             std::size_t lvl_offset)
         : time(log_time),
           logger_name(name),

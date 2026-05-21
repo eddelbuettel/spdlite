@@ -15,7 +15,7 @@ Just copy the `include/spdlite/` folder into your build tree.
 
 int main() {
     using namespace spdlite;
-    logger_st<console_sink> log("app", console_sink{});
+    logger<console_sink> log("app", console_sink{});
 
     log.info("Hello {}", "world");
     log.info("Value: {}", 42);
@@ -34,14 +34,19 @@ Output:
 
 See [`include/spdlite/logger.h`](include/spdlite/logger.h) for the full API and [`include/spdlite/sinks/`](include/spdlite/sinks/) for the available sinks.
 
-## fmt vs `std::format`
+## Thread safety
 
-If you'd rather use `<format>` (zero vendored dependencies, smaller install),
-define `SPDLITE_USE_STD_FORMAT` and the `fmt/` subfolder can be left out:
+`logger` is thread-safe by default — it uses a `std::mutex` to serialize format and dispatch
+per call, so multiple threads can write through the same instance safely.
 
-```console
-$ cmake -DCMAKE_CXX_FLAGS="-DSPDLITE_USE_STD_FORMAT" ..
+If you don't require thread safety, you can use `logger_st` which skips the lock entirely:
+
+```c++
+spdlite::logger<console_sink>    loogger("app", console_sink{});  // std::mutex
+spdlite::logger_st<console_sink> logger("app", console_sink{});  // no locking
 ```
+
+Both share the same API; only the mutex type differs.
 
 ## Formatter options
 
@@ -72,7 +77,7 @@ no argument evaluation, no symbol — via the `SPDLITE_*` macros:
 #define SPDLITE_ACTIVE_LEVEL SPDLITE_LEVEL_INFO  // before the include
 #include "spdlite/logger.h"
 
-void hot_path(spdlite::logger_st<spdlite::console_sink>& log) {
+void hot_path(spdlite::logger<spdlite::console_sink>& log) {
     SPDLITE_DEBUG(log, "value={}", expensive_to_compute());  // gone — args not evaluated
     SPDLITE_INFO(log,  "did the thing");                     // stays
 }
@@ -82,6 +87,19 @@ Macros: `SPDLITE_TRACE`, `SPDLITE_DEBUG`, `SPDLITE_INFO`, `SPDLITE_WARN`, `SPDLI
 `SPDLITE_CRITICAL`. Levels: `SPDLITE_LEVEL_TRACE` (0) ... `SPDLITE_LEVEL_OFF` (6). Per-TU
 setting; default is `SPDLITE_LEVEL_TRACE` (no elision). The compile-time gate is independent
 of the runtime `set_log_level()` — a call emits only when both gates pass.
+
+## Build options
+
+CMake isn't required to *use* spdlite — copy the headers and you're done. The flags below
+only apply if you build the bundled example, tests, or benchmarks with the provided
+`CMakeLists.txt`.
+
+| Option                   | Default | Effect                                                                 |
+| ------------------------ | ------- | ---------------------------------------------------------------------- |
+| `SPDLITE_BUILD_EXAMPLE`  | `ON`    | Build the example executable.                                          |
+| `SPDLITE_BUILD_TESTS`    | `OFF`   | Build the doctest-based unit tests.                                    |
+| `SPDLITE_BUILD_BENCH`    | `OFF`   | Build the benchmarks (fetches Google Benchmark automatically).         |
+| `SPDLITE_USE_STD_FORMAT` | unset   | Compile-time define: use `<format>` instead of bundled fmt — drop `fmt/` from the install. Pass via `-DCMAKE_CXX_FLAGS=-DSPDLITE_USE_STD_FORMAT`. |
 
 ## Benchmarks
 

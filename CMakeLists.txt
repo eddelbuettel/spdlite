@@ -21,7 +21,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(SPDLITE_BUILD_EXAMPLE    "Build spdlite example"                  ON)
 option(SPDLITE_BUILD_TESTS      "Build spdlite unit tests (doctest)"     OFF)
 option(SPDLITE_BUILD_BENCH      "Build spdlite benchmarks"               OFF)
-option(SPDLITE_BUILD_CALLER_ZOO "Build caller_zoo stress executable"     OFF)
 
 # Header files (for IDE visibility only - not compiled)
 set(SPDLITE_HEADERS
@@ -48,12 +47,6 @@ endif()
 # Example
 if(SPDLITE_BUILD_EXAMPLE)
     add_subdirectory(example)
-endif()
-
-# Caller-zoo: synthetic stress for measuring per-callsite cost (binary size, compile time).
-if(SPDLITE_BUILD_CALLER_ZOO)
-    add_executable(caller_zoo bench/caller_zoo.cpp)
-    target_link_libraries(caller_zoo PRIVATE spdlite)
 endif()
 
 # Benchmarks

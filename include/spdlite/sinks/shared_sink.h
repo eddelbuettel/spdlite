@@ -12,7 +12,7 @@ namespace spdlite {
 
 // Wraps any sink so multiple loggers can write through one underlying instance.
 // Copies share the sink and the lock; the lock serializes cross-logger writes
-// (each logger_mt's mutex still serializes within one logger).
+// (each logger's own mutex still serializes within one logger).
 template <typename Sink>
 class shared_sink {
 public:

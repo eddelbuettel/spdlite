@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is spdlite
 
-A minimal, header-only C++20 logging library - a lite version of [spdlog](https://github.com/gabime/spdlog). Sinks are compile-time template parameters (zero virtual dispatch). Thread safety is selected via `logger_mt` (mutex) vs `logger_st` (null_mutex). Bundles fmt 12.1.0 (header-only); can alternatively use `std::format` via `-DSPDLITE_USE_STD_FORMAT`.
+A minimal, header-only C++20 logging library - a lite version of [spdlog](https://github.com/gabime/spdlog). Sinks are compile-time template parameters (zero virtual dispatch). Default `logger` is thread-safe (`std::mutex`); `logger_st` is the single-threaded opt-out (null_mutex, zero locking). Bundles fmt 12.1.0 (header-only); can alternatively use `std::format` via `-DSPDLITE_USE_STD_FORMAT`.
 
 ## Build commands
 
@@ -21,10 +21,6 @@ cmake --build build
 cmake -B build -DSPDLITE_BUILD_BENCH=ON .
 cmake --build build
 # or use the shortcut: ./build.sh (benchmarks + Release)
-
-# build caller_zoo (binary-size / compile-time stress test)
-cmake -B build -DSPDLITE_BUILD_CALLER_ZOO=ON .
-cmake --build build
 
 # run
 ./build/example          # or build/Debug/example.exe on MSVC
@@ -53,7 +49,7 @@ All code lives under `include/spdlite/` - there is no `.cpp` compilation.
   - `file_sink` - `fopen`/`fwrite` with RAII via `unique_ptr<FILE>`. Creates parent directories automatically.
   - `rotating_file_sink` - same as `file_sink` plus a `max_size` cap with N-file rotation (`app.txt` -> `app.1.txt` -> ... -> dropped). `max_files` defaults to 1 (single rotation), capped at `rotating_file_sink::max_files_limit` (1000). Tracks `current_size_` in the sink so the cap check is one int compare on the hot path.
   - `null_sink` - discards output (used in benchmarks).
-  - `shared_sink<Sink>` - wraps any sink with `shared_ptr<Sink>` + a shared `std::mutex`, so multiple loggers can write through one underlying instance. Copy the wrapper to give it to additional loggers - both the sink and the lock are shared. The wrapper's lock serializes cross-logger access; each `logger_mt`'s own mutex still serializes within one logger.
+  - `shared_sink<Sink>` - wraps any sink with `shared_ptr<Sink>` + a shared `std::mutex`, so multiple loggers can write through one underlying instance. Copy the wrapper to give it to additional loggers - both the sink and the lock are shared. The wrapper's lock serializes cross-logger access; each `logger`'s own mutex still serializes within one logger.
 - **`fmt/`** - vendored fmt 12.1.0 headers (`base.h`, `format.h`, `format-inl.h`). Do not edit these.
 
 To drop into another project, copy `include/spdlite/logger.h` plus the sinks you need (and `fmt/` unless using `SPDLITE_USE_STD_FORMAT`). No CMake required.

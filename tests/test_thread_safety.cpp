@@ -15,12 +15,12 @@
 using namespace spdlite;
 using helpers::capture_sink;
 
-TEST_CASE("logger_mt: N threads x M messages all reach the sink, no torn lines") {
+TEST_CASE("logger: N threads x M messages all reach the sink, no torn lines") {
     constexpr int n_threads = 8;
     constexpr int per_thread = 500;
 
     capture_sink cap;
-    logger_mt<capture_sink> log{"mt", cap};
+    logger<capture_sink> log{"mt", cap};
 
     std::vector<std::thread> threads;
     threads.reserve(n_threads);
@@ -47,12 +47,12 @@ TEST_CASE("logger_mt: N threads x M messages all reach the sink, no torn lines")
                       [&](const std::string& p) { return expected.count(p) != 0; }));
 }
 
-TEST_CASE("logger_mt: concurrent log + flush is safe") {
+TEST_CASE("logger: concurrent log + flush is safe") {
     constexpr int n_writers = 4;
     constexpr int per_writer = 200;
 
     capture_sink cap;
-    logger_mt<capture_sink> log{"mt", cap};
+    logger<capture_sink> log{"mt", cap};
 
     std::atomic<bool> done{false};
     std::thread flusher([&] {

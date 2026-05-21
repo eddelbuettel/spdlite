@@ -93,12 +93,12 @@ struct format_options {
 // Layout flexes with format_options - the cached header is rebuilt on options change,
 // so the hot path stays "patch a few bytes + memcpy" regardless of layout.
 struct formatter {
-    explicit formatter(string_view_t logger_name = {}, format_options opts = {})
+    explicit formatter(std::string_view logger_name = {}, format_options opts = {})
         : opts_(opts) {
         rebuild_header(logger_name);
     }
 
-    void set_logger_name(string_view_t name) { rebuild_header(name); }
+    void set_logger_name(std::string_view name) { rebuild_header(name); }
 
     // append the cached header to dest. Patches the fractional digits (if any) and
     // level per call; rebuilds the date/time digits only when the second changes.
@@ -160,7 +160,7 @@ private:
     std::size_t level_offset_{};
     std::chrono::seconds last_secs_{};
 
-    void rebuild_header(string_view_t logger_name) {
+    void rebuild_header(std::string_view logger_name) {
         header_.clear();
         header_ = opts_.show_date ? "[0000-00-00 00:00:00" : "[00:00:00";
         if (opts_.precision != time_precision::none) {
