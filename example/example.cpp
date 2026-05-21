@@ -94,7 +94,7 @@ void rotating_file_sink_example() {
 // Compose multiple sinks into one logger - a single log call writes to all of them.
 void multi_sink_example() {
     using namespace spdlite;
-    logger_st<console_sink, file_sink> multi("my_logger", console_sink{}, file_sink{"logs/multi.txt", open_mode::truncate});
+    logger_st<console_sink, file_sink> multi(console_sink{}, file_sink{"logs/multi.txt", open_mode::truncate});
     multi.info("This goes to both console and file");
 }
 
