@@ -63,6 +63,26 @@ See the table below for all available fields:
 | `show_thread_id` | `false`              | Include a 6-digit thread id after the timestamp.             |
 | `precision`      | `time_precision::ms` | Fractional digits: `none`, `ms` (3), `us` (6), or `ns` (9).  |
 
+## Compile-time level gating
+
+Strip log calls below a chosen severity from the binary entirely — no format string,
+no argument evaluation, no symbol — via the `SPDLITE_*` macros:
+
+```c++
+#define SPDLITE_ACTIVE_LEVEL SPDLITE_LEVEL_INFO  // before the include
+#include "spdlite/logger.h"
+
+void hot_path(spdlite::logger_st<spdlite::console_sink>& log) {
+    SPDLITE_DEBUG(log, "value={}", expensive_to_compute());  // gone — args not evaluated
+    SPDLITE_INFO(log,  "did the thing");                     // stays
+}
+```
+
+Macros: `SPDLITE_TRACE`, `SPDLITE_DEBUG`, `SPDLITE_INFO`, `SPDLITE_WARN`, `SPDLITE_ERROR`,
+`SPDLITE_CRITICAL`. Levels: `SPDLITE_LEVEL_TRACE` (0) ... `SPDLITE_LEVEL_OFF` (6). Per-TU
+setting; default is `SPDLITE_LEVEL_TRACE` (no elision). The compile-time gate is independent
+of the runtime `set_log_level()` — a call emits only when both gates pass.
+
 ## Benchmarks
 
 Build and run:
