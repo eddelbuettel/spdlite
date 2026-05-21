@@ -105,6 +105,7 @@ public:
     [[nodiscard]] level flush_level() const noexcept { return flush_level_.load(std::memory_order_relaxed); }
     [[nodiscard]] const std::string& name() const noexcept { return name_; }
     void name(const string_view& name) {
+        std::lock_guard<Mutex> lock(mutex_);
         name_ = name;
         formatter_.set_logger_name(name);
     }
